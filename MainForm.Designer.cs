@@ -53,7 +53,7 @@ namespace KeyCounter
             // 
             this.taskBarIcon.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
             this.taskBarIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("taskBarIcon.Icon")));
-            this.taskBarIcon.Text = "notifyIcon1";
+            this.taskBarIcon.Text = "Key Counter";
             this.taskBarIcon.Visible = true;
             this.taskBarIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon_MouseDoubleClick);
             // 
@@ -182,6 +182,7 @@ namespace KeyCounter
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Key Counter";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Shown += new System.EventHandler(this.MainForm_Shown);
             this.Resize += new System.EventHandler(this.Form1_Resize);
