@@ -39,6 +39,7 @@
             this.profilesLabel = new System.Windows.Forms.Label();
             this.resetToDefaultButton = new System.Windows.Forms.Button();
             this.startMinimisedCheckBox = new System.Windows.Forms.CheckBox();
+            this.unloadImagesCheckBox = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // startWithWindowsCheckBox
@@ -53,7 +54,7 @@
             // 
             // profilesLocationTextBox
             // 
-            this.profilesLocationTextBox.Location = new System.Drawing.Point(12, 97);
+            this.profilesLocationTextBox.Location = new System.Drawing.Point(12, 122);
             this.profilesLocationTextBox.Name = "profilesLocationTextBox";
             this.profilesLocationTextBox.ReadOnly = true;
             this.profilesLocationTextBox.Size = new System.Drawing.Size(215, 23);
@@ -63,7 +64,7 @@
             // profilesLocationLabel
             // 
             this.profilesLocationLabel.AutoSize = true;
-            this.profilesLocationLabel.Location = new System.Drawing.Point(12, 79);
+            this.profilesLocationLabel.Location = new System.Drawing.Point(12, 104);
             this.profilesLocationLabel.Name = "profilesLocationLabel";
             this.profilesLocationLabel.Size = new System.Drawing.Size(131, 15);
             this.profilesLocationLabel.TabIndex = 2;
@@ -71,7 +72,7 @@
             // 
             // saveButton
             // 
-            this.saveButton.Location = new System.Drawing.Point(43, 280);
+            this.saveButton.Location = new System.Drawing.Point(43, 305);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(114, 23);
             this.saveButton.TabIndex = 3;
@@ -82,7 +83,7 @@
             // onStartProfileCheckBox
             // 
             this.onStartProfileCheckBox.AutoSize = true;
-            this.onStartProfileCheckBox.Location = new System.Drawing.Point(12, 149);
+            this.onStartProfileCheckBox.Location = new System.Drawing.Point(12, 174);
             this.onStartProfileCheckBox.Name = "onStartProfileCheckBox";
             this.onStartProfileCheckBox.Size = new System.Drawing.Size(215, 19);
             this.onStartProfileCheckBox.TabIndex = 4;
@@ -92,7 +93,7 @@
             // 
             // changePathButton
             // 
-            this.changePathButton.Location = new System.Drawing.Point(254, 96);
+            this.changePathButton.Location = new System.Drawing.Point(254, 121);
             this.changePathButton.Name = "changePathButton";
             this.changePathButton.Size = new System.Drawing.Size(114, 23);
             this.changePathButton.TabIndex = 5;
@@ -103,7 +104,7 @@
             // profilesComboBox
             // 
             this.profilesComboBox.FormattingEnabled = true;
-            this.profilesComboBox.Location = new System.Drawing.Point(12, 210);
+            this.profilesComboBox.Location = new System.Drawing.Point(12, 235);
             this.profilesComboBox.Name = "profilesComboBox";
             this.profilesComboBox.Size = new System.Drawing.Size(215, 23);
             this.profilesComboBox.TabIndex = 6;
@@ -111,7 +112,7 @@
             // profilesLabel
             // 
             this.profilesLabel.AutoSize = true;
-            this.profilesLabel.Location = new System.Drawing.Point(12, 192);
+            this.profilesLabel.Location = new System.Drawing.Point(12, 217);
             this.profilesLabel.Name = "profilesLabel";
             this.profilesLabel.Size = new System.Drawing.Size(145, 15);
             this.profilesLabel.TabIndex = 7;
@@ -119,7 +120,7 @@
             // 
             // resetToDefaultButton
             // 
-            this.resetToDefaultButton.Location = new System.Drawing.Point(224, 280);
+            this.resetToDefaultButton.Location = new System.Drawing.Point(224, 305);
             this.resetToDefaultButton.Name = "resetToDefaultButton";
             this.resetToDefaultButton.Size = new System.Drawing.Size(114, 23);
             this.resetToDefaultButton.TabIndex = 8;
@@ -136,11 +137,22 @@
             this.startMinimisedCheckBox.Text = "Start Minimised";
             this.startMinimisedCheckBox.UseVisualStyleBackColor = true;
             // 
+            // unloadImagesCheckBox
+            // 
+            this.unloadImagesCheckBox.AutoSize = true;
+            this.unloadImagesCheckBox.Location = new System.Drawing.Point(12, 66);
+            this.unloadImagesCheckBox.Name = "unloadImagesCheckBox";
+            this.unloadImagesCheckBox.Size = new System.Drawing.Size(198, 19);
+            this.unloadImagesCheckBox.TabIndex = 10;
+            this.unloadImagesCheckBox.Text = "Unload Images When Minimised";
+            this.unloadImagesCheckBox.UseVisualStyleBackColor = true;
+            // 
             // OptionsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(380, 315);
+            this.ClientSize = new System.Drawing.Size(380, 338);
+            this.Controls.Add(this.unloadImagesCheckBox);
             this.Controls.Add(this.startMinimisedCheckBox);
             this.Controls.Add(this.resetToDefaultButton);
             this.Controls.Add(this.profilesLabel);
@@ -175,5 +187,6 @@
         private System.Windows.Forms.Label profilesLabel;
         private System.Windows.Forms.Button resetToDefaultButton;
         private System.Windows.Forms.CheckBox startMinimisedCheckBox;
+        private System.Windows.Forms.CheckBox unloadImagesCheckBox;
     }
 }

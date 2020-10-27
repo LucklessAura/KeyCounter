@@ -47,6 +47,8 @@ namespace KeyCounter
             this.deleteProfileButton = new System.Windows.Forms.Button();
             this.newProfileButton = new System.Windows.Forms.Button();
             this.profilesContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.timeUsedLabel = new System.Windows.Forms.Label();
+            this.timeUsedTextBox = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // taskBarIcon
@@ -126,7 +128,6 @@ namespace KeyCounter
             this.collectionsComboBox.Size = new System.Drawing.Size(225, 23);
             this.collectionsComboBox.TabIndex = 7;
             this.collectionsComboBox.SelectedIndexChanged += new System.EventHandler(this.collectionsComboBox_SelectedIndexChanged);
-            this.collectionsComboBox.DataSourceChanged += new System.EventHandler(this.collectionsComboBox_SelectedIndexChanged);
             // 
             // collectionLabel
             // 
@@ -163,10 +164,30 @@ namespace KeyCounter
             this.profilesContextMenu.Size = new System.Drawing.Size(61, 4);
             this.profilesContextMenu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.profilesContextMenu_ItemClicked);
             // 
+            // timeUsedLabel
+            // 
+            this.timeUsedLabel.AutoSize = true;
+            this.timeUsedLabel.Location = new System.Drawing.Point(12, 580);
+            this.timeUsedLabel.Name = "timeUsedLabel";
+            this.timeUsedLabel.Size = new System.Drawing.Size(61, 15);
+            this.timeUsedLabel.TabIndex = 9;
+            this.timeUsedLabel.Text = "Tme Used:";
+            // 
+            // timeUsedTextBox
+            // 
+            this.timeUsedTextBox.Cursor = System.Windows.Forms.Cursors.Default;
+            this.timeUsedTextBox.Location = new System.Drawing.Point(79, 577);
+            this.timeUsedTextBox.Name = "timeUsedTextBox";
+            this.timeUsedTextBox.ReadOnly = true;
+            this.timeUsedTextBox.Size = new System.Drawing.Size(220, 23);
+            this.timeUsedTextBox.TabIndex = 10;
+            // 
             // MainForm
             // 
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(653, 575);
+            this.ClientSize = new System.Drawing.Size(660, 613);
+            this.Controls.Add(this.timeUsedTextBox);
+            this.Controls.Add(this.timeUsedLabel);
             this.Controls.Add(this.newProfileButton);
             this.Controls.Add(this.deleteProfileButton);
             this.Controls.Add(this.collectionLabel);
@@ -185,6 +206,7 @@ namespace KeyCounter
             this.Text = "Key Counter";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Shown += new System.EventHandler(this.MainForm_Shown);
+            this.VisibleChanged += new System.EventHandler(this.MainForm_VisibleChanged);
             this.Resize += new System.EventHandler(this.Form1_Resize);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -207,6 +229,8 @@ namespace KeyCounter
         private Button deleteProfileButton;
         private Button newProfileButton;
         private ContextMenuStrip profilesContextMenu;
+        private Label timeUsedLabel;
+        private TextBox timeUsedTextBox;
     }
 }
 

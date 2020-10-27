@@ -1,8 +1,11 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
+// ReSharper disable FieldCanBeMadeReadOnly.Local
+// ReSharper disable All
 
 namespace KeyCounter
 {
@@ -16,9 +19,12 @@ namespace KeyCounter
         public string ProfilesLocation { get; set; }
         public string LastSelectedProfile { get; set; }
         public bool UseLastProfile { get; set; }
-        public bool StartMinimised { get; set; }
+        public bool StartMinimized { get; set; }
+        public bool UnloadImages { get; set; }
         public string OnStartProfile { get; set; }
         public BindingList<string> ProfilesList { get; set; }
+        
+
         private string _execDirectoryPath;
 
         /// <summary>
@@ -30,7 +36,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Reset the curent options to their default values, if the <c>deleteProfiles</c> value is true also reset the 
+        /// Reset the current options to their default values, if the <c>deleteProfiles</c> value is true also reset the 
         /// profiles list 
         /// </summary>
         /// <param name="deleteProfiles">determines if the profiles list should be reset or kept</param>
@@ -41,7 +47,8 @@ namespace KeyCounter
             LastSelectedProfile = "";
             UseLastProfile = true;
             OnStartProfile = "";
-            StartMinimised = false;
+            StartMinimized = false;
+            UnloadImages = false;
             if (deleteProfiles == true || ProfilesList == null)
             {
                 ProfilesList = new BindingList<string>();
@@ -75,11 +82,11 @@ namespace KeyCounter
                 files[i] = Path.GetFileName(files[i]);
             }
 
-            /// <summary>
-            /// check if an options.cfg file exist in the apps folder, if it exists deserialize it in a <c>readOptions</c>
-            /// variable and copy the read options to the current <c>Options</c> object
-            /// </summary>
-            if (Miscelanious.IsInVector(files, "options.cfg"))
+            
+            // check if an options.cfg file exist in the apps folder, if it exists deserialize it in a <c>readOptions</c>
+            // variable and copy the read options to the current Options object
+
+            if (files.Contains("options.cfg"))
             {
                 string textOptions = System.IO.File.ReadAllText(_execDirectoryPath + "\\" + "options.cfg");
                 Options readOptions = JsonSerializer.Deserialize<Options>(textOptions);
@@ -89,7 +96,8 @@ namespace KeyCounter
                 this.ProfilesLocation = readOptions.ProfilesLocation;
                 this.UseLastProfile = readOptions.UseLastProfile;
                 this.AutoStart = readOptions.AutoStart;
-                this.StartMinimised = readOptions.StartMinimised;
+                this.StartMinimized = readOptions.StartMinimized;
+                this.UnloadImages = readOptions.UnloadImages;
             }
             else
             {

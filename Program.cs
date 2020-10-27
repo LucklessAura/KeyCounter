@@ -14,19 +14,17 @@ namespace KeyCounter
         [STAThread]
         static void Main()
         {
-            /// <summary>
-            /// Verify if there already exists an instance of this app, if it exists show a message else start the app.
-            /// </summary>
-            bool createNew = true;
-            using (Mutex mutex = new Mutex(true,"KeyCounter",out createNew))
+
+            // Verify if there already exists an instance of this app, if it exists show a message else start the app.
+            using (Mutex mutex = new Mutex(true,"KeyCounter",out bool createNew))
             {
                 if (createNew)
                 {
                     Application.SetHighDpiMode(HighDpiMode.SystemAware);
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
-                    Application.ThreadException += HandleExceptions;
-                    AppDomain.CurrentDomain.UnhandledException += HandleExceptions;
+                    //Application.ThreadException += HandleExceptions;
+                    //AppDomain.CurrentDomain.UnhandledException += HandleExceptions;
                     Application.Run(new MainForm());       
                 }
                 else
@@ -42,6 +40,7 @@ namespace KeyCounter
                     }
                 }
             }
+
         }
 
         /// <summary>

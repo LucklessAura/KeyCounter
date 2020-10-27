@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
 using IWshRuntimeLibrary;
 
 namespace KeyCounter
@@ -12,21 +13,21 @@ namespace KeyCounter
     /// </summary>
     public partial class MainForm : Form
     {
-        private KeyboardHookClass _keyboard = new KeyboardHookClass();
+        private readonly KeyboardHookClass _keyboard = new KeyboardHookClass();
 
-        private MouseHookClass _mouse = new MouseHookClass();
+        private readonly MouseHookClass _mouse = new MouseHookClass();
 
-        private GamepadClass _gamepad = new GamepadClass();
+        private readonly GamepadClass _gamepad = new GamepadClass();
 
-        public static Profile CurrentProfile = new Profile();
+        public static Profile CurrentProfile;
 
-        private ImageList _imageList = new ImageList();
+        private readonly ImageList _imageList = new ImageList();
 
-        private Options _options = new Options();
+        private readonly Options _options = new Options();
 
-        private string _execDirectoryPath = Path.GetDirectoryName(Application.ExecutablePath);
+        private readonly string _execDirectoryPath = Path.GetDirectoryName(Application.ExecutablePath);
 
-        private DictionaryWithEvents _currentSelectedDictionary = null;
+        private DictionaryWithEvents _currentSelectedDictionary;
 
         private DateTime _profileStartDate;
 
@@ -69,10 +70,11 @@ namespace KeyCounter
                     profileComboBox.DataSource = new BindingSource { DataSource = _options.ProfilesList };
 
                     //try to open the newly created profile and call profileComboBox_SelectedIndexChanged
-                    //if it succeds else if the corresponding file is not found delete the profile from 
+                    //if it succeeds else if the corresponding file is not found delete the profile from 
                     // the current options profile list 
                     try
                     {
+
                         CurrentProfile = ProfileManager.SelectProfile(profileForm.ProfileName);
 
                         profileComboBox.SelectedIndex = 0;
@@ -99,11 +101,6 @@ namespace KeyCounter
         private void InitialSetUp()
         {
 
-            // initialize the image classes for all supported input devices
-            KeyboardImages.Initialize();
-            MouseImages.Initialize();
-            GamepadImages.Initialize();
-
             //read the options.cfg or create a new one if it does not exist
             _options.ReadOrCreateOptionsFile();
 
@@ -112,6 +109,16 @@ namespace KeyCounter
 
             //initialize start date for measuring how much time a profile was used 
             _profileStartDate = DateTime.UtcNow;
+
+
+            // set up the handlers for the gamepad events related to the connection to the computer
+            _gamepad.OnGamepadFoundStatus += () => { MessageBox.Show("Gamepad Found"); };
+            _gamepad.OnGamepadDisconnectStatus += () => { MessageBox.Show("Gamepad disconnected"); };
+            _gamepad.OnNoGamepadFoundStatus += () => { MessageBox.Show("No gamepad connected found"); };
+
+            KeyboardImages.Initialize();
+            MouseImages.Initialize();
+            GamepadImages.Initialize();
 
             // if the number of profiles is 0 force the creation of one
             ForceCreateProfile();
@@ -123,10 +130,10 @@ namespace KeyCounter
 
                 //if the option UseLastProfile is true try setting the CurrentProfile to the last used
                 // profile before the app closing 
-                if (_options.LastSelectedProfile != "" && _options.UseLastProfile == true)
+                if (_options.LastSelectedProfile != "" && _options.UseLastProfile)
                 {
                     //try opening the LastSelectedProfile profile and call profileComboBox_SelectedIndexChanged
-                    //if it succeds else if it does not succed open the first profile in the 
+                    //if it succeeds else if it does not succeed open the first profile in the 
                     // current options profile list, if the current options profile list is empty force
                     // the creation of a new profile
                     try
@@ -163,7 +170,7 @@ namespace KeyCounter
                 else if (_options.UseLastProfile == false && _options.OnStartProfile != "")
                 {
                     //try setting the CurrentProfile to the OnStartProfile and call profileComboBox_SelectedIndexChanged
-                    //if it succeds else if this fails try to set the CurrentProfile 
+                    //if it succeeds else if this fails try to set the CurrentProfile 
                     //to the first element in the options profiles list, if the list is empty force the creation of a
                     // new valid profile
                     try
@@ -203,8 +210,8 @@ namespace KeyCounter
 
             }
             
-            // set the tool strip for the taskbar icon with the current list of profiles
-            ToolStripMenuItem[] toolStripMenuItems = new ToolStripMenuItem[_options.ProfilesList.Count];
+            // set the tool strip for the task-bar icon with the current list of profiles
+            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
             
             for (int i = 0; i < _options.ProfilesList.Count; i++)
             {
@@ -219,10 +226,7 @@ namespace KeyCounter
             _keyboard.Initialize();
             _mouse.Initialize();
 
-            // set up the handlers for the gamepad events related to the connection to the computer
-            _gamepad.OnGamepadFoundStatus += () => { MessageBox.Show("Gamepad Found"); };
-            _gamepad.OnGamepadDisconnectStatus += () => { MessageBox.Show("Gamepad disconnected"); };
-            _gamepad.OnNoGamepadFoundStatus += () => { MessageBox.Show("No gamepad connected found"); };
+
 
             _imageList.ImageSize = new Size(150, 80);
 
@@ -230,7 +234,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// When the form is resized verify if it was minimised, if it was hide the form from view
+        /// When the form is resized verify if it was minimized, if it was hide the form from view
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -245,7 +249,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Set the form to visible when the icon in the taskbar is Double Clicked 
+        /// Set the form to visible when the icon in the task-bar is Double Clicked 
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -261,7 +265,7 @@ namespace KeyCounter
 
         /// <summary>
         /// Save the current profile, options, remove keyboard and mouse hooks, stop the gamepad operations and dispose of the 
-        /// taskbar icon
+        /// task-bar icon
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -292,71 +296,82 @@ namespace KeyCounter
         /// <param name="e"></param>
         private void profileComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-
             if (profileComboBox.Text != CurrentProfile.Name || collectionsComboBox.DataSource == null)
             {
-                //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
-                //and add it to it's count so far and save the profile
-                _profileStopDate = DateTime.UtcNow;
+                //Thread thread = new Thread
+                //(
+                //    () =>
+                //    {
+                        //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
+                        //and add it to it's count so far and save the profile
+                        _profileStopDate = DateTime.UtcNow;
 
-                CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - _profileStartDate).TotalHours,2);
+                        CurrentProfile.TimeUsed += (float) Math.Round((_profileStopDate - _profileStartDate).TotalHours, 2);
 
-                ProfileManager.SaveProfile(CurrentProfile);
+                        ProfileManager.SaveProfile(CurrentProfile);
 
-                //try setting the CurrentProfile according to the value of the profileComboBox 
-                // if this fails try to set the CurrentProfile 
-                // to the first element in the options profiles list, if the list is empty force the creation of a
-                // new valid profile
-                try
-                {
-                    CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
-                }
-                catch (FileNotFoundException)
-                {
-                    MessageBox.Show("4 The file corresponding to " + profileComboBox.SelectedItem.ToString() + " was not found, it will now be removed from memory.");
+                        //try setting the CurrentProfile according to the value of the profileComboBox 
+                        // if this fails try to set the CurrentProfile 
+                        // to the first element in the options profiles list, if the list is empty force the creation of a
+                        // new valid profile
+                        try
+                        {
+                            CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            MessageBox.Show("4 The file corresponding to " + profileComboBox.SelectedItem +
+                                            " was not found, it will now be removed from memory.");
 
-                    _options.ProfilesList.Remove(profileComboBox.Text);
-                    if (_options.ProfilesList.Count == 0)
-                    {
-                        ForceCreateProfile();
-                    }
-                    else
-                    {
-                        profileComboBox.SelectedIndex = 0;
+                            _options.ProfilesList.Remove(profileComboBox.Text);
+                            if (_options.ProfilesList.Count == 0)
+                            {
+                                ForceCreateProfile();
+                            }
+                            else
+                            {
+                                profileComboBox.SelectedIndex = 0;
 
-                        CurrentProfile = ProfileManager.SelectProfile(profileComboBox.Text);
+                                CurrentProfile = ProfileManager.SelectProfile(profileComboBox.Text);
 
-                    }
-                }
+                            }
+                        }
 
-                // set the start date of this profile to the closing one of the last one
-                _profileStartDate = _profileStopDate;
+                        // set the start date of this profile to the closing one of the last one
+                        _profileStartDate = _profileStopDate;
 
-                //give the new values for the CurrentProfile, list view and image list to the class
-                // handling the dictionary events setup 
-                DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView);
+                        //give the new values for the CurrentProfile, list view and image list to the class
+                        // handling the dictionary events setup 
+                        DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView,timeUsedTextBox);
 
-                //set up the handlsers for the dictionaries of the newly selected profile
-                DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
+                        //set up the handlers for the dictionaries of the newly selected profile
+                        DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
 
-                // if needed start the gamepad connection and handling processes
-                if (!CurrentProfile.NeedsGamepad)
-                {
-                    _gamepad.Stop();
-                }
-                else
-                {
-                    _gamepad.Start();
-                }
+                        // if needed start the gamepad connection and handling processes
+                        if (!CurrentProfile.NeedsGamepad)
+                        {
+                            _gamepad.Stop();
+                        }
+                        else
+                        {
+                            _gamepad.Start();
+                        }
 
 
-                collectionsComboBox.DataSource = new BindingSource { DataSource = CurrentProfile.TypesOfInputList };
+                        collectionsComboBox.DataSource = new BindingSource
+                        {
+                            DataSource = CurrentProfile.TypesOfInputList
+                        };
 
-                _options.LastSelectedProfile = CurrentProfile.Name;
+                        _options.LastSelectedProfile = CurrentProfile.Name;
 
-                profileComboBox.SelectedItem = CurrentProfile.Name;
+                        profileComboBox.SelectedItem = CurrentProfile.Name;
+
+                //    }
+                //);
+
+                //thread.Start();
             }
-            
 
             this.ActiveControl = null;
         }
@@ -388,7 +403,9 @@ namespace KeyCounter
                         keysListView.Items.Clear();
                         
                         _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
+
                         _currentSelectedDictionary.EnableEvents();
+
                         _currentSelectedDictionary.InitialLoad();
                         break;
                     }
@@ -397,7 +414,9 @@ namespace KeyCounter
                         keysListView.Items.Clear();
                         
                         _currentSelectedDictionary = CurrentProfile.MouseKeys;
+
                         _currentSelectedDictionary.EnableEvents();
+
                         CurrentProfile.MouseKeys.InitialLoad();
                         break;
                     }
@@ -405,8 +424,9 @@ namespace KeyCounter
                     {
                         keysListView.Items.Clear();
                         
-                        _currentSelectedDictionary = CurrentProfile.GamepadKeys;
+
                         _currentSelectedDictionary.EnableEvents();
+
                         CurrentProfile.GamepadKeys.InitialLoad();
                         break;
                     }
@@ -414,11 +434,11 @@ namespace KeyCounter
                     {
 
                         keysListView.Items.Clear();
+
                         CurrentProfile.KeyboardKeys.EnableEvents();
                         CurrentProfile.MouseKeys.EnableEvents();
                         CurrentProfile.GamepadKeys.EnableEvents();
 
-                        
                         _imageList.Images.Clear();
 
                         foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
@@ -426,6 +446,7 @@ namespace KeyCounter
                             _imageList.Images.Add(item.Key, item.Value.Image);
                             keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
                         }
+
                         break;
                     }
                default:
@@ -438,7 +459,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Createa a new OptionsForm and based on its result change the current options
+        /// Creates a new OptionsForm and based on its result change the current options
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -469,20 +490,21 @@ namespace KeyCounter
                     ProfileManager.ProfilesFolder = optionsForm.ProfilesLocation + "\\" + "Profiles";
                     _options.ProfilesLocation = optionsForm.ProfilesLocation + "\\" + "Profiles";
                 }
-                // retrive the other option set by the user
+                // retrieve the other option set by the user
                 _options.OnStartProfile = optionsForm.OnStartProfile;
                 _options.UseLastProfile = optionsForm.UseLastProfile;
-                _options.StartMinimised = optionsForm.StartMinimised;
+                _options.StartMinimized = optionsForm.StartMinimized;
+                _options.UnloadImages = optionsForm.UnloadImages;
 
-                // if autostart is set to true put a shortcut of the app in the Startup folder of the current computer
+                // if auto-start is set to true put a shortcut of the app in the Startup folder of the current computer
                 // else remove the shortcut from the Startup folder
                 if (_options.AutoStart != optionsForm.StartWithWindows)
                 {
                     _options.AutoStart = optionsForm.StartWithWindows;
-                    if (_options.AutoStart == true)
+                    if (_options.AutoStart)
                     { 
                         Console.WriteLine(Application.ExecutablePath.Replace(".dll", ".exe"));
-                        var startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                        string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
                         WshShellClass shell = new WshShellClass();
                         IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(startupFolder + "\\" + "KeyCounter.lnk");
                         shortcut.TargetPath = Application.ExecutablePath.Replace(".dll", ".exe");
@@ -492,7 +514,7 @@ namespace KeyCounter
                     }
                     else
                     {
-                        var startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                        string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
 
                         if (System.IO.File.Exists(startupFolder + "\\" + "KeyCounter.lnk"))
                         {
@@ -534,17 +556,17 @@ namespace KeyCounter
         /// <param name="e"></param>
         private void newProfileButton_Click(object sender, EventArgs e)
         {
-            NewProfileForm @newProfileForm = new NewProfileForm(_options);
-            DialogResult formResult = @newProfileForm.ShowDialog();
+            NewProfileForm newProfileForm = new NewProfileForm(_options);
+            DialogResult formResult = newProfileForm.ShowDialog();
             if (formResult == DialogResult.Yes)
             {
-                ProfileManager.CreateProfile(@newProfileForm.ProfileName, @newProfileForm.NeedsGamepad);
-                _options.ProfilesList.Add(@newProfileForm.ProfileName);
-                taskBarIcon.ContextMenuStrip.Items.Add(@newProfileForm.ProfileName);
-                profileComboBox.SelectedItem = @newProfileForm.ProfileName;
+                ProfileManager.CreateProfile(newProfileForm.ProfileName, newProfileForm.NeedsGamepad);
+                _options.ProfilesList.Add(newProfileForm.ProfileName);
+                taskBarIcon.ContextMenuStrip.Items.Add(newProfileForm.ProfileName);
+                profileComboBox.SelectedItem = newProfileForm.ProfileName;
                 profileComboBox_SelectedIndexChanged(null, null);
             }
-            @newProfileForm.Dispose();
+            newProfileForm.Dispose();
         }
 
         /// <summary>
@@ -578,20 +600,21 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// The firt time the form is shown hide it if the option to start minimised is set to true
+        /// The first time the form is shown hide it if the option to start minimized is set to true
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void MainForm_Shown(object sender, EventArgs e)
         {
-            if (_options.StartMinimised == true)
+            if (_options.StartMinimized)
             {
                 this.Hide();
             }
+
         }
 
         /// <summary>
-        /// When a item in the context menu of the icon in the taskbar is pressed change the CurrentProfile to that 
+        /// When a item in the context menu of the icon in the task-bar is pressed change the CurrentProfile to that 
         /// item
         /// </summary>
         /// <param name="sender"></param>
@@ -600,6 +623,32 @@ namespace KeyCounter
         {
             profileComboBox.Text = e.ClickedItem.Text;
             profileComboBox_SelectedIndexChanged(null, null);
+        }
+
+        private void MainForm_VisibleChanged(object sender, EventArgs e)
+        {
+
+            if (this.Visible == false && _options.UnloadImages)
+            {
+                CurrentProfile.KeyboardKeys.DisableEvents();
+                CurrentProfile.MouseKeys.DisableEvents();
+                CurrentProfile.GamepadKeys.DisableEvents();
+
+                KeyboardImages.UnloadImages();
+                MouseImages.UnloadImages();
+                GamepadImages.UnloadImages();
+            }
+            else if (this.Visible)
+            {
+
+                KeyboardImages.Initialize();
+                MouseImages.Initialize();
+                GamepadImages.Initialize();
+
+                CurrentProfile.KeyboardKeys.EnableEvents();
+                CurrentProfile.MouseKeys.EnableEvents();
+                CurrentProfile.GamepadKeys.EnableEvents();
+            }
         }
     }
 }

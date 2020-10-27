@@ -12,7 +12,7 @@ namespace KeyCounter
 
         public string ProfileName { get; set; }
         public bool NeedsGamepad { get; set; }
-        private BindingList<string> _profiles;
+        private readonly BindingList<string> _profiles;
 
         /// <summary>
         /// Constructor for the <c>NewProfileForm</c> class initializing the parameters
@@ -21,19 +21,13 @@ namespace KeyCounter
         public NewProfileForm(Options options)
         {
             InitializeComponent();
-            ///<summary>
-            /// Give the <c>Save</c> button a dialog result
-            ///</summary>
+            
+            // Give the Save button a dialog result
             this.createProfileButton.DialogResult = DialogResult.Yes;
 
-            ///<summary>
-            /// Disable the <c>Save button</c>
-            /// </summary>
             this.createProfileButton.Enabled = false;
 
-            ///<summary>
-            ///Initialize the <c>_profile</c> with the options Profiles List and <c>errorTextBox</c> with an error message
-            /// </summary>
+            //Initialize the _profile with the options Profiles List and errorTextBox with an error message
             _profiles = options.ProfilesList;
             errorTextBox.Text = "Length must be bigger than 0.";
 
@@ -59,9 +53,7 @@ namespace KeyCounter
                 errorTextBox.Text = "Can't create multiple profiles with the same name.";
             }
 
-            ///<summary>
-            /// if the profile name is not in the profiles list and has a length > 0 activate the <c>Save</c> button
-            /// </summary>
+            // if the profile name is not in the profiles list and has a length > 0 activate the Save button
             if (profileNameTextBox.Text.Length > 0 && !_profiles.Contains(profileNameTextBox.Text))
             {
                 this.createProfileButton.Enabled = true;
@@ -72,7 +64,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// <c>NeedsGamepad</c> receves the <c>needsGamepadCheckBox.Checked</c> value
+        /// <c>NeedsGamepad</c> receives the <c>needsGamepadCheckBox.Checked</c> value
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>

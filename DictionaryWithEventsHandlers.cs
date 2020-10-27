@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 
 namespace KeyCounter
@@ -12,6 +13,7 @@ namespace KeyCounter
         private static Profile _currentProfile;
         private static ImageList _imageList;
         private static ListView _keysListView;
+        private static TextBox _timeTextBox;
 
         /// <summary>
         /// Sets up the profile, image list ans list view with which it should interact
@@ -19,11 +21,13 @@ namespace KeyCounter
         /// <param name="profile">profile for which the events should be set up, usually the CurrentProfile</param>
         /// <param name="imageList">image list where the images for each key should be added</param>
         /// <param name="listView">list view for which elements should be added</param>
-        public static void SetInternals(Profile profile, ImageList imageList, ListView listView)
+        /// <param name="timeTextBox">text box where the time should be displayed</param>
+        public static void SetInternals(Profile profile, ImageList imageList, ListView listView, TextBox timeTextBox)
         {
             _currentProfile = profile;
             _imageList = imageList;
             _keysListView = listView;
+            _timeTextBox = timeTextBox;
         }
 
         /// <summary>
@@ -80,6 +84,9 @@ namespace KeyCounter
             {
                 foundIndex[i].Text = (int.Parse(foundIndex[i].Text) + 1).ToString();
             }
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
         /// <summary>
@@ -92,6 +99,10 @@ namespace KeyCounter
             _imageList.Images.Add(key, GamepadImages.GetImageForKey(key));
             //add to the list view the element with the count = 1
             _keysListView.Items.Add(key, 1.ToString(), key);
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
         /// <summary>
@@ -109,6 +120,10 @@ namespace KeyCounter
                 _imageList.Images.Add(item.Key, item.Value.Image);
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
 
@@ -126,6 +141,10 @@ namespace KeyCounter
             {
                 foundIndex[i].Text = (int.Parse(foundIndex[i].Text) + 1).ToString();
             }
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
 
@@ -140,6 +159,10 @@ namespace KeyCounter
             _imageList.Images.Add(key, MouseImages.GetImageForKey(key));
             //add to the list view the element with the count = 1
             _keysListView.Items.Add(key, 1.ToString(), key);
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
         /// <summary>
@@ -157,6 +180,10 @@ namespace KeyCounter
                 _imageList.Images.Add(item.Key, item.Value.Image);
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
 
@@ -174,6 +201,10 @@ namespace KeyCounter
                 _imageList.Images.Add(item.Key, item.Value.Image);
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
 
@@ -188,6 +219,10 @@ namespace KeyCounter
             //add to the list view the element with the count = 1
 
             _keysListView.Items.Add(key, 1.ToString(), key);
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
 
         /// <summary>
@@ -204,6 +239,10 @@ namespace KeyCounter
             {
                 foundIndex[i].Text = (int.Parse(foundIndex[i].Text) + 1).ToString();
             }
+
+
+            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
+            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
         }
     }
 }

@@ -68,11 +68,11 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Remove the key from the dictionary, raises the <c>OnUpdateStatus</c> event if the operation is succesful and the 
+        /// Remove the key from the dictionary, raises the <c>OnUpdateStatus</c> event if the operation is successful and the 
         /// should raise events flag is true
         /// </summary>
         /// <param name="key"></param>
-        /// <returns>true if the operation was succesful, false otherwise</returns>
+        /// <returns>true if the operation was successful, false otherwise</returns>
         public bool Remove(string key)
         {
 

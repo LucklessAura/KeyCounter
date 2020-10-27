@@ -19,6 +19,7 @@ namespace KeyCounter
         public DictionaryWithEvents GamepadKeys {get; set;}
         public DictionaryWithEvents TotalKeys {get; set;}
         public List<string> TypesOfInputList { get; set; }
+
     }
 
     /// <summary>
@@ -94,18 +95,14 @@ namespace KeyCounter
             Profile profile = JsonSerializer.Deserialize<Profile>(File.ReadAllText(ProfilesFolder + "\\" + profileName + ".json"));
             List<string> keys = profile.KeyboardKeys.Dictionary.Keys.ToList();
             
-            ///<summary>
-            /// For each key in the profile create a new <c>CustomPair</c> containing the number of presses and the image for each key of the keyboard dictionary
-            /// </summary>
+            // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the keyboard dictionary
             foreach (string key in keys)
             {
                 profile.KeyboardKeys.Dictionary[key] = new CustomPair(profile.KeyboardKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
                 profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
             }
 
-            ///<summary>
-            /// For each key in the profile create a new <c>CustomPair</c> containing the number of presses and the image for each key of the mouse dictionary
-            /// </summary>
+            // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the mouse dictionary
             keys = profile.MouseKeys.Dictionary.Keys.ToList();
             foreach (string key in keys)
             {
@@ -113,9 +110,7 @@ namespace KeyCounter
                 profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
             }
 
-            ///<summary>
-            /// For each key in the profile create a new <c>CustomPair</c> containing the number of presses and the image for each key of the gamepad dictionary
-            /// </summary>
+            // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the gamepad dictionary
             keys = profile.GamepadKeys.Dictionary.Keys.ToList();
             foreach (string key in keys)
             {
@@ -134,9 +129,7 @@ namespace KeyCounter
         /// <param name="type">The input device of the key (keyboard/ mouse/ gamepad)</param>
         public static void AddToDictionary(string key,string type)
         {
-            ///<summary>
-            /// the Xbox gamepad returns the middle button press as a keyboard press.
-            /// </summary>
+            // the Xbox gamepad returns the middle button press as a keyboard press.
             if(key == "LButton, XButton2")
             {
                 type = "gamepad";
@@ -144,9 +137,7 @@ namespace KeyCounter
 
             if (type == "keyboard")
             {
-                ///<summary>
-                /// Add or increase count to the keyboard dictionary
-                /// </summary>
+                // Add or increase count to the keyboard dictionary
                 if (MainForm.CurrentProfile.KeyboardKeys.ContainsKey(key))
                 {
                     MainForm.CurrentProfile.KeyboardKeys.AddOne(key);
@@ -156,9 +147,7 @@ namespace KeyCounter
                     MainForm.CurrentProfile.KeyboardKeys.Add(key, KeyboardImages.GetImageForKey(key), 1);
                 }
 
-                ///<summary>
-                /// Add or increase count to the total keys dictionary
-                /// </summary>
+                // Add or increase count to the total keys dictionary
                 if (MainForm.CurrentProfile.TotalKeys.ContainsKey(key))
                 {
                  
@@ -171,9 +160,7 @@ namespace KeyCounter
             }
             else if(type == "mouse")
             {
-                ///<summary>
-                /// Add or increase count to the mouse dictionary
-                /// </summary>
+                // Add or increase count to the mouse dictionary
                 if (MainForm.CurrentProfile.MouseKeys.ContainsKey(key))
                 {
                     MainForm.CurrentProfile.MouseKeys.AddOne(key);
@@ -183,9 +170,7 @@ namespace KeyCounter
                     MainForm.CurrentProfile.MouseKeys.Add(key, MouseImages.GetImageForKey(key), 1);
                 }
 
-                ///<summary>
-                /// Add or increase count to the total keys dictionary
-                /// </summary>
+                // Add or increase count to the total keys dictionary
                 if (MainForm.CurrentProfile.TotalKeys.ContainsKey(key))
                 {
                  
@@ -198,9 +183,7 @@ namespace KeyCounter
             }
             else if(type == "gamepad")
             {
-                ///<summary>
-                /// Add or increase count to the gamepad dictionary
-                /// </summary>
+                // Add or increase count to the gamepad dictionary
                 if (MainForm.CurrentProfile.GamepadKeys.ContainsKey(key))
                 {
                     MainForm.CurrentProfile.GamepadKeys.AddOne(key);
@@ -210,9 +193,7 @@ namespace KeyCounter
                     MainForm.CurrentProfile.GamepadKeys.Add(key, GamepadImages.GetImageForKey(key), 1);
                 }
 
-                ///<summary>
-                /// Add or increase count to the total keys dictionary
-                /// </summary>
+                // Add or increase count to the total keys dictionary
                 if (MainForm.CurrentProfile.TotalKeys.ContainsKey(key))
                 {
                     

@@ -12,8 +12,9 @@ namespace KeyCounter
         public bool StartWithWindows { get; set; }
         public string ProfilesLocation { get; set; }
         public bool UseLastProfile { get; set; }
-        public bool StartMinimised { get; set; }
+        public bool StartMinimized { get; set; }
         public string OnStartProfile { get; set; }
+        public bool UnloadImages { get; set; }
 
         /// <summary>
         /// Constructor for the <c>OptionsForm</c> class initializing the parameters
@@ -23,26 +24,23 @@ namespace KeyCounter
         {
             InitializeComponent();
 
-            ///<summary>
-            /// Initialize each of the forms proprieties according to the receved <c>options </c> object
-            /// </summary>
+            // Initialize each of the forms proprieties according to the received options object
             this.profilesLocationTextBox.Text = options.ProfilesLocation;
             this.ProfilesLocation = options.ProfilesLocation;
             this.startWithWindowsCheckBox.Checked = this.StartWithWindows = options.AutoStart;
             this.onStartProfileCheckBox.Checked = this.UseLastProfile = options.UseLastProfile;
             this.OnStartProfile = options.OnStartProfile;
-            this.startMinimisedCheckBox.Checked = this.StartMinimised = options.StartMinimised;
+            this.startMinimisedCheckBox.Checked = this.StartMinimized = options.StartMinimized;
+            this.unloadImagesCheckBox.Checked = this.UnloadImages = options.UnloadImages;
 
             this.profilesComboBox.DataSource = new BindingSource { DataSource = options.ProfilesList };
 
             this.profilesLocationFileBrowserDialog.SelectedPath = options.ProfilesLocation;
 
 
-            ///<summary>
-            /// Give the two button a dialog result that is used to determine if the new options should be saved or discarded
-            /// <para>Yes - currently loaded options should be overwritten with the newly receved ones</para>
-            /// <para>No - the newly receved options should be discarded, the loaded options will not be modified</para>
-            /// </summary>
+            // Give the two button a dialog result that is used to determine if the new options should be saved or discarded
+            // Yes - currently loaded options should be overwritten with the newly received ones
+            // No - the newly received options should be discarded, the loaded options will not be modified
             this.saveButton.DialogResult = DialogResult.Yes;
 
             this.resetToDefaultButton.DialogResult = DialogResult.No;
@@ -84,14 +82,7 @@ namespace KeyCounter
         /// <param name="e"></param>
         private void OnStartProfileCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            if (this.onStartProfileCheckBox.Checked)
-            {
-                this.profilesComboBox.Enabled = false;
-            }
-            else
-            {
-                this.profilesComboBox.Enabled = true;
-            }
+            this.profilesComboBox.Enabled = !this.onStartProfileCheckBox.Checked;
         }
 
         /// <summary>
@@ -107,22 +98,12 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// When a new selection is made int the <c>ProfilesComboBox</c> change the <c>OnStartProfile</c> to the new selection text
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ProfilesComboBox_SelectionChangeCommitted(object sender, EventArgs e)
-        {
-            this.OnStartProfile = profilesComboBox.SelectedItem.ToString();
-        }
-
-        /// <summary>
         /// <para>Take the </para>
         /// <para>
-        /// <c>StartMinimised</c>, <c>OnStartProfile</c>, <c>StartWithWindows</c>,<c>UseLastProfile</c> 
+        /// <c>StartMinimized</c>, <c>OnStartProfile</c>, <c>StartWithWindows</c>,<c>UseLastProfile</c> 
         /// </para>
         /// values from the 
-        /// <para><c>startMinimisedCheckBox.Checked</c>,<c> profilesComboBox.SelectedItem</c>,<c>tartWithWindowsCheckBox.Checked</c>,<c>onStartProfileCheckBox.Checked</c>
+        /// <para><c>startMinimizedCheckBox.Checked</c>,<c> profilesComboBox.SelectedItem</c>,<c>tartWithWindowsCheckBox.Checked</c>,<c>onStartProfileCheckBox.Checked</c>
         /// </para>
         /// <para>
         /// elements of the form
@@ -132,10 +113,11 @@ namespace KeyCounter
         /// <param name="e"></param>
         private void saveButton_Click(object sender, EventArgs e)
         {
-            StartMinimised = this.startMinimisedCheckBox.Checked;
+            StartMinimized = this.startMinimisedCheckBox.Checked;
             this.OnStartProfile = profilesComboBox.SelectedItem.ToString();
             StartWithWindows = startWithWindowsCheckBox.Checked;
             this.UseLastProfile = onStartProfileCheckBox.Checked;
+            this.UnloadImages = unloadImagesCheckBox.Checked;
         }
     }
 }

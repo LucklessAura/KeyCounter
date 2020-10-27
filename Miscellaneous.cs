@@ -2,30 +2,7 @@
 
 namespace KeyCounter
 {
-    /// <summary>
-    /// Class for Miscelanoius operations that had no place in other classes
-    /// </summary>
-    public static class Miscelanious
-    {
-        /// <summary>
-        /// Verify if a value exists in a vector
-        /// </summary>
-        /// <param name="vector"></param>
-        /// <param name="value"></param>
-        /// <returns>true if the value is in vector, false otherwise</returns>
-        public static bool IsInVector(object[] vector, object value)
-        {
-            for (int i = 0; i < vector.Length; i++)
-            {
-                if (vector[i].Equals(value))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
+    
     /// <summary>
     /// Class having two proprieties, a <c>uint </c>and an <c>Image</c>
     /// </summary>

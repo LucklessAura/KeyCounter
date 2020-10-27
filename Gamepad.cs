@@ -47,14 +47,8 @@ namespace KeyCounter
         /// </summary>
         public void Stop()
         {
-            if (_handleGamepadTimer != null)
-            {
-                _handleGamepadTimer.Stop();
-            }
-            if (_connectGamepadTimer != null)
-            {
-                _connectGamepadTimer.Stop();
-            }
+            _handleGamepadTimer?.Stop();
+            _connectGamepadTimer?.Stop();
             _connected = false;
             _controller = null;
             if (thread != null)
@@ -118,7 +112,7 @@ namespace KeyCounter
         /// Check if a key was pressed on the gamepad
         /// </summary>
         /// <returns>the key press if it exists</returns>
-        public Keystroke RetrunKeystroke()
+        public Keystroke ReturnKeystroke()
         {
             Keystroke keystroke = new Keystroke();
             _controller.GetKeystroke(DeviceQueryType.Gamepad, out keystroke);
@@ -128,7 +122,7 @@ namespace KeyCounter
         /// <summary>
         /// Adds the key pressed to the corresponding dictionary of the CurrentProfile,
         /// <para>
-        /// if it detects that the Gamepad has been diconnected it raises the <c>OnGamepadDisconnectStatus</c>
+        /// if it detects that the Gamepad has been disconnected it raises the <c>OnGamepadDisconnectStatus</c>
         /// and stops the handler for key presses and restarts the process to connect the gamepad 
         /// </para>
         /// </summary>
@@ -143,7 +137,7 @@ namespace KeyCounter
                 OnGamepadDisconnectStatus();
             }
 
-            Keystroke keystroke = this.RetrunKeystroke();
+            Keystroke keystroke = this.ReturnKeystroke();
             if (!keystroke.VirtualKey.Equals(SharpDX.XInput.GamepadKeyCode.None) && keystroke.Flags.Equals(SharpDX.XInput.KeyStrokeFlags.KeyUp))
             {
                 string key = keystroke.VirtualKey.ToString();
@@ -153,6 +147,10 @@ namespace KeyCounter
                 {
                     key = "gamepad" + key;
                 }
+
+                //DirectDX reports LeftThumbUpLeft and LeftThumbDownLeft as RightThumbUpLeft and RightThumbDownLeft
+                // while reporting the actual RightThumbUpLeft and RightThumbDownLeft as RightThumbUpleft and RightThumbDownleft
+                // solving this problem for the moment with this if
                 if (key == "RightThumbUpLeft")
                 {
                     key = "LeftThumbUpLeft";

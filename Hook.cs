@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -10,15 +11,16 @@ namespace KeyCounter
     /// <summary>
     /// Structure returned by a LowLevelKeyboardEvent
     /// </summary>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public struct LowLevelKeyboardStructure
     {
-        public UInt32 VirtualKeyCode;
+        public uint VirtualKeyCode;
 
-        public UInt32 HardwareScanCodeKey;
+        public uint HardwareScanCodeKey;
 
-        public UInt32 Flags;
+        public uint Flags;
 
-        public UInt32 TimeStamp;
+        public uint TimeStamp;
 
         public UIntPtr ExtraInformation;
 
@@ -27,15 +29,16 @@ namespace KeyCounter
     /// <summary>
     /// Structure returned by a LowLevelMouseEvent
     /// </summary>
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public struct LowLevelMouseStructure
     {
-        public Point point;
+        public Point Point;
 
-        public Int32 MouseData;
+        public int MouseData;
 
-        public Int32 Flags;
+        public int Flags;
 
-        public UInt32 TimeStamp;
+        public uint TimeStamp;
 
         public UIntPtr ExtraInformation;
 
@@ -52,7 +55,7 @@ namespace KeyCounter
 
         public delegate IntPtr MouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
-        private static MouseProc _procMouse = HandleMouseEvent;
+        private static readonly MouseProc _procMouse = HandleMouseEvent;
 
         private static Point _mousePos = new Point(0, 0);
 
@@ -215,8 +218,8 @@ namespace KeyCounter
                         if (mouseStruct.TimeStamp - _lastMouseUpdate > 15)
                         {
                             _lastMouseUpdate = (Int32)mouseStruct.TimeStamp;
-                            MovementDirection(_mousePos, mouseStruct.point);
-                            _mousePos = mouseStruct.point;
+                            MovementDirection(_mousePos, mouseStruct.Point);
+                            _mousePos = mouseStruct.Point;
                         }
                         break;
                     }
@@ -227,7 +230,7 @@ namespace KeyCounter
 
         }
 
-        // start the attachement function 
+        // start the attachment function 
         public void Initialize()
         {
             _mouseHookId = AttachMouseHook(_procMouse);
@@ -246,10 +249,10 @@ namespace KeyCounter
 
         public delegate IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
-        private static KeyboardProc _procKeyboard = HandleKeyboardEvent;
+        private static readonly KeyboardProc _procKeyboard = HandleKeyboardEvent;
 
         // used to ignore consecutive key pressed events that happen when a key is pressed without releasing the physical key
-        private static List<Keys> _currentlyPressed = new List<Keys>();
+        private static readonly List<Keys> _currentlyPressed = new List<Keys>();
 
         [DllImport("USER32", CharSet = CharSet.Auto, SetLastError = true)]
         static extern IntPtr CallNextHookEx(IntPtr hHook, int code, IntPtr wParam, IntPtr lParam);
@@ -322,7 +325,7 @@ namespace KeyCounter
             return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
         }
 
-        // start the attachement function
+        // start the attachment function
         public void Initialize()
         {
             _keyboardHookId = AttachKeyboardHook(_procKeyboard);
