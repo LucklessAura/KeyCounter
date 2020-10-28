@@ -14,6 +14,7 @@ namespace KeyCounter
         private static ImageList _imageList;
         private static ListView _keysListView;
         private static TextBox _timeTextBox;
+        public delegate void UpdateTimeDelegate(Control control, Profile profile);
 
         /// <summary>
         /// Sets up the profile, image list ans list view with which it should interact
@@ -85,9 +86,24 @@ namespace KeyCounter
                 foundIndex[i].Text = (int.Parse(foundIndex[i].Text) + 1).ToString();
             }
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox,_currentProfile);
+
+            
         }
+
+        public static void UpdateTimeInvoker(Control control, Profile profile)
+        {
+            if (_timeTextBox.InvokeRequired)
+            {
+                _timeTextBox.Invoke(new UpdateTimeDelegate(UpdateTimeInvoker), new object[] { control, profile});
+            }
+            else
+            {
+                TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed + (float) Math.Round((DateTime.UtcNow - MainForm.ProfileStartDate).TotalHours, 2));
+                control.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            }
+        }
+
 
         /// <summary>
         /// Handler for a key that is new
@@ -101,8 +117,7 @@ namespace KeyCounter
             _keysListView.Items.Add(key, 1.ToString(), key);
 
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
         /// <summary>
@@ -122,8 +137,7 @@ namespace KeyCounter
             }
 
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
 
@@ -143,8 +157,7 @@ namespace KeyCounter
             }
 
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
 
@@ -161,8 +174,7 @@ namespace KeyCounter
             _keysListView.Items.Add(key, 1.ToString(), key);
 
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
         /// <summary>
@@ -182,8 +194,7 @@ namespace KeyCounter
             }
 
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
 
@@ -202,9 +213,7 @@ namespace KeyCounter
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
 
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
 
@@ -220,9 +229,7 @@ namespace KeyCounter
 
             _keysListView.Items.Add(key, 1.ToString(), key);
 
-
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
 
         /// <summary>
@@ -240,9 +247,7 @@ namespace KeyCounter
                 foundIndex[i].Text = (int.Parse(foundIndex[i].Text) + 1).ToString();
             }
 
-
-            TimeSpan used = TimeSpan.FromHours(_currentProfile.TimeUsed);
-            _timeTextBox.Text = $"{used.Days} days, {used.Hours} hours, {used.Minutes} minutes";
+            UpdateTimeInvoker(_timeTextBox, _currentProfile);
         }
     }
 }

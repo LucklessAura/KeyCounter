@@ -23,8 +23,8 @@ namespace KeyCounter
                     Application.SetHighDpiMode(HighDpiMode.SystemAware);
                     Application.EnableVisualStyles();
                     Application.SetCompatibleTextRenderingDefault(false);
-                    //Application.ThreadException += HandleExceptions;
-                    //AppDomain.CurrentDomain.UnhandledException += HandleExceptions;
+                    Application.ThreadException += HandleExceptions;
+                    AppDomain.CurrentDomain.UnhandledException += HandleExceptions;
                     Application.Run(new MainForm());       
                 }
                 else

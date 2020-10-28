@@ -3,7 +3,9 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using IWshRuntimeLibrary;
 
 namespace KeyCounter
@@ -29,7 +31,10 @@ namespace KeyCounter
 
         private DictionaryWithEvents _currentSelectedDictionary;
 
-        private DateTime _profileStartDate;
+        internal static DateTime ProfileStartDate;
+
+        public delegate void UpdateSelectedProfile(ComboBox control, string profile);
+        public delegate string SelectProfile(ComboBox control);
 
         private DateTime _profileStopDate;
 
@@ -95,7 +100,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Set up parameters, read needed files and initialize proprieties
+        /// UpdateTimeInvoker up parameters, read needed files and initialize proprieties
         /// </summary>
         /// <exception cref="ArgumentException"> thrown when no profile could be selected or created</exception>
         private void InitialSetUp()
@@ -108,7 +113,7 @@ namespace KeyCounter
             ProfileManager.ProfilesFolder = _options.ProfilesLocation;
 
             //initialize start date for measuring how much time a profile was used 
-            _profileStartDate = DateTime.UtcNow;
+            ProfileStartDate = DateTime.UtcNow;
 
 
             // set up the handlers for the gamepad events related to the connection to the computer
@@ -249,7 +254,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Set the form to visible when the icon in the task-bar is Double Clicked 
+        /// UpdateTimeInvoker the form to visible when the icon in the task-bar is Double Clicked 
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -274,7 +279,7 @@ namespace KeyCounter
             //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
             //and add it to it's count so far 
             _profileStopDate = DateTime.UtcNow;
-            CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - _profileStartDate).TotalHours, 2);
+            CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
 
             ProfileManager.SaveProfile(CurrentProfile);
 
@@ -294,19 +299,16 @@ namespace KeyCounter
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void profileComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void  profileComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (profileComboBox.Text != CurrentProfile.Name || collectionsComboBox.DataSource == null)
             {
-                //Thread thread = new Thread
-                //(
-                //    () =>
-                //    {
+
                         //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
                         //and add it to it's count so far and save the profile
                         _profileStopDate = DateTime.UtcNow;
 
-                        CurrentProfile.TimeUsed += (float) Math.Round((_profileStopDate - _profileStartDate).TotalHours, 2);
+                        CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
 
                         ProfileManager.SaveProfile(CurrentProfile);
 
@@ -316,7 +318,8 @@ namespace KeyCounter
                         // new valid profile
                         try
                         {
-                            CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
+
+                                CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
                         }
                         catch (FileNotFoundException)
                         {
@@ -331,18 +334,20 @@ namespace KeyCounter
                             else
                             {
                                 profileComboBox.SelectedIndex = 0;
+    
+                                CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
 
-                                CurrentProfile = ProfileManager.SelectProfile(profileComboBox.Text);
-
+                                
                             }
                         }
 
                         // set the start date of this profile to the closing one of the last one
-                        _profileStartDate = _profileStopDate;
+                        ProfileStartDate = _profileStopDate;
+
 
                         //give the new values for the CurrentProfile, list view and image list to the class
                         // handling the dictionary events setup 
-                        DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView,timeUsedTextBox);
+                        DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView, timeUsedTextBox);
 
                         //set up the handlers for the dictionaries of the newly selected profile
                         DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
@@ -367,13 +372,39 @@ namespace KeyCounter
 
                         profileComboBox.SelectedItem = CurrentProfile.Name;
 
-                //    }
-                //);
+                        
+                
 
-                //thread.Start();
             }
 
             this.ActiveControl = null;
+        }
+
+
+
+        public void Set(ComboBox control, string profile)
+        {
+            if (profileComboBox.InvokeRequired)
+            {
+                profileComboBox.Invoke(new UpdateSelectedProfile(Set), new object[] { control, profile });
+            }
+            else
+            {
+                control.SelectedItem = profile;
+            }
+        }
+
+
+        public string SelectProfileInvoker(ComboBox control)
+        {
+            if (profileComboBox.InvokeRequired)
+            {
+               return profileComboBox.Invoke(new SelectProfile(SelectProfileInvoker), new object[] { control}).ToString();
+            }
+            else
+            {
+                return control.SelectedItem.ToString();
+            }
         }
 
         /// <summary>
@@ -644,6 +675,32 @@ namespace KeyCounter
                 KeyboardImages.Initialize();
                 MouseImages.Initialize();
                 GamepadImages.Initialize();
+
+
+                List<string> keys = CurrentProfile.KeyboardKeys.Dictionary.Keys.ToList();
+
+                // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the keyboard dictionary
+                foreach (string key in keys)
+                {
+                    CurrentProfile.KeyboardKeys.Dictionary[key] = new CustomPair(CurrentProfile.KeyboardKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
+                    CurrentProfile.TotalKeys.Dictionary[key] = new CustomPair(CurrentProfile.TotalKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
+                }
+
+                // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the mouse dictionary
+                keys = CurrentProfile.MouseKeys.Dictionary.Keys.ToList();
+                foreach (string key in keys)
+                {
+                    CurrentProfile.MouseKeys.Dictionary[key] = new CustomPair(CurrentProfile.MouseKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
+                    CurrentProfile.TotalKeys.Dictionary[key] = new CustomPair(CurrentProfile.TotalKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
+                }
+
+                // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the gamepad dictionary
+                keys = CurrentProfile.GamepadKeys.Dictionary.Keys.ToList();
+                foreach (string key in keys)
+                {
+                    CurrentProfile.GamepadKeys.Dictionary[key] = new CustomPair(CurrentProfile.GamepadKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
+                    CurrentProfile.TotalKeys.Dictionary[key] = new CustomPair(CurrentProfile.TotalKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
+                }
 
                 CurrentProfile.KeyboardKeys.EnableEvents();
                 CurrentProfile.MouseKeys.EnableEvents();

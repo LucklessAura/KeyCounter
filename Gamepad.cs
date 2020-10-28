@@ -62,7 +62,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Set up and starts a Timer to try to connect with a gamepad, this happens ever 1 sec
+        /// UpdateTimeInvoker up and starts a Timer to try to connect with a gamepad, this happens ever 1 sec
         /// </summary>
         private void SetUpConnectionTimer()
         {
@@ -97,7 +97,7 @@ namespace KeyCounter
         }
 
         /// <summary>
-        /// Set up and starts a Timer to handle gamepad key presses, the handle function is called aprox. 60 times a sec
+        /// UpdateTimeInvoker up and starts a Timer to handle gamepad key presses, the handle function is called aprox. 60 times a sec
         /// </summary>
         private void SetUpKeysChecking()
         {
