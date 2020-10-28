@@ -98,24 +98,51 @@ namespace KeyCounter
             // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the keyboard dictionary
             foreach (string key in keys)
             {
-                profile.KeyboardKeys.Dictionary[key] = new CustomPair(profile.KeyboardKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
-                profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
+                if (!profile.KeyboardKeys.Dictionary.ContainsKey(key))
+                {
+                    profile.KeyboardKeys.Dictionary[key] = new CustomPair(profile.KeyboardKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, KeyboardImages.GetImageForKey(key));
+                }
+                else
+                {
+                    profile.KeyboardKeys.Dictionary[key].ReplaceImage(KeyboardImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key].ReplaceImage(KeyboardImages.GetImageForKey(key));
+                }
+                
             }
 
             // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the mouse dictionary
             keys = profile.MouseKeys.Dictionary.Keys.ToList();
             foreach (string key in keys)
             {
-                profile.MouseKeys.Dictionary[key] = new CustomPair(profile.MouseKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
-                profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
+                if (!profile.MouseKeys.Dictionary.ContainsKey(key))
+                {
+                    profile.MouseKeys.Dictionary[key] = new CustomPair(profile.MouseKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, MouseImages.GetImageForKey(key));
+                }
+                else
+                {
+                    profile.MouseKeys.Dictionary[key].ReplaceImage(MouseImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key].ReplaceImage(MouseImages.GetImageForKey(key));
+                }
+
             }
 
             // For each key in the profile create a new CustomPair containing the number of presses and the image for each key of the gamepad dictionary
             keys = profile.GamepadKeys.Dictionary.Keys.ToList();
             foreach (string key in keys)
             {
-                profile.GamepadKeys.Dictionary[key] = new CustomPair(profile.GamepadKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
-                profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
+                if (!profile.GamepadKeys.Dictionary.ContainsKey(key))
+                {
+                    profile.GamepadKeys.Dictionary[key] = new CustomPair(profile.GamepadKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key] = new CustomPair(profile.TotalKeys.Dictionary[key].Number, GamepadImages.GetImageForKey(key));
+                }
+                else
+                {
+                    profile.MouseKeys.Dictionary[key].ReplaceImage(GamepadImages.GetImageForKey(key));
+                    profile.TotalKeys.Dictionary[key].ReplaceImage(GamepadImages.GetImageForKey(key));
+                }
+                
             } 
 
             return profile;

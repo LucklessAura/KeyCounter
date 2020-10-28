@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Windows.Forms;
 
 
@@ -23,19 +24,24 @@ namespace KeyCounter
         private static Image _tempImage;
         private static Dictionary<string, Image> _keyboardImages;
 
+
         /// <summary>
         /// initialize dictionary with all images in the corresponding folder
         /// </summary>
         public static void Initialize()
         {
-            _keyboardImages = new Dictionary<string, Image>();
-            foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
+            if (_keyboardImages == null)
             {
-                if (image.EndsWith(".png"))
+                _keyboardImages = new Dictionary<string, Image>();
+                foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
                 {
-                    _keyboardImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    if (image.EndsWith(".png"))
+                    {
+                        _keyboardImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    }
                 }
             }
+            
         }
 
         /// <summary>
@@ -123,14 +129,18 @@ namespace KeyCounter
         /// </summary>
         public static void Initialize()
         {
-            _mouseImages = new Dictionary<string, Image>();
-            foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
+            if (_mouseImages == null)
             {
-                if (image.EndsWith(".png"))
+                _mouseImages = new Dictionary<string, Image>();
+                foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
                 {
-                    _mouseImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    if (image.EndsWith(".png"))
+                    {
+                        _mouseImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    }
                 }
             }
+           
         }
 
         /// <summary>
@@ -159,7 +169,6 @@ namespace KeyCounter
                         size -= 5;
                         _font = new Font(_fontFamily, size);
                     }
-                    Console.WriteLine("{0}   {1}",(int)((tempImage.Width - g.MeasureString(key, _font).Width) / 2), (int)((tempImage.Height - g.MeasureString(key, _font).Height)));
                     g.DrawString(key, _font, Brushes.Gray, new Point((int)((tempImage.Width - g.MeasureString(key, _font).Width) / 2), (int)((tempImage.Height - g.MeasureString(key, _font).Height) )));
 
 
@@ -205,14 +214,18 @@ namespace KeyCounter
         /// </summary>
         public static void Initialize()
         {
-            _gamepadImages = new Dictionary<string, Image>();
-            foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
+            if (_gamepadImages == null)
             {
-                if (image.EndsWith(".png"))
+                _gamepadImages = new Dictionary<string, Image>();
+                foreach (string image in Directory.EnumerateFiles(_execDirectoryPath + IMAGES_PATH))
                 {
-                    _gamepadImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    if (image.EndsWith(".png"))
+                    {
+                        _gamepadImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                    }
                 }
             }
+           
         }
 
 
@@ -247,7 +260,7 @@ namespace KeyCounter
 
 
                     _gamepadImages.Add(key, tempImage);
-                    Console.WriteLine(key);
+
                     tempImage.Save(_execDirectoryPath + IMAGES_PATH + key + ".png", ImageFormat.Png);
                     _font.Dispose();
                     return _gamepadImages[key];

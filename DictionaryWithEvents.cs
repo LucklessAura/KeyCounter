@@ -106,7 +106,7 @@ namespace KeyCounter
         public void AddOne(string key)
         {
             _lastUpdatedKey = key;
-            Dictionary[key] = new CustomPair(Dictionary[key].Number + 1, Dictionary[key].Image);
+            Dictionary[key].AddOne();
             if (this._shouldRaiseEvents == true)
             {
                 OnUpdateStatus();

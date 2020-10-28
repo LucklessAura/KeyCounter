@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Text;
 
 namespace KeyCounter
 {
@@ -29,6 +30,17 @@ namespace KeyCounter
         {
             this.Number = 0;
             this.Image = null;
+        }
+
+        public void ReplaceImage(Image image)
+        {
+            Image?.Dispose();
+            this.Image = image;
+        }
+
+        public void AddOne()
+        {
+            this.Number += 1;
         }
     }
 
