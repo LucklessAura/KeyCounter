@@ -59,8 +59,11 @@ namespace KeyCounter
 
         private static Point _mousePos = new Point(0, 0);
 
-        private static Int32 _lastMouseUpdate = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
+        private static int _lastMouseUpdate = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
 
+        private static string _lastMouseMovement = "";
+
+        private static int _lastMouseWheelMovement = 0;
 
         [DllImport("USER32", CharSet = CharSet.Auto, SetLastError = true)]
         static extern IntPtr CallNextHookEx(IntPtr hHook, int code, IntPtr wParam, IntPtr lParam);
@@ -104,65 +107,45 @@ namespace KeyCounter
         /// </summary>
         /// <param name="oldCoordinates">the last coordinates of the mouse</param>
         /// <param name="newCoordinates">the new coordinates of the mouse</param>
-        private static void  MovementDirection(Point oldCoordinates, Point newCoordinates)
+        private static string MovementDirection(Point oldCoordinates, Point newCoordinates)
         {
-            if(!oldCoordinates.Equals(newCoordinates))
+            if (oldCoordinates.Equals(newCoordinates)) return null;
+            if (newCoordinates.Y > oldCoordinates.Y)
             {
-                if (newCoordinates.Y > oldCoordinates.Y)
+                // moved downwards
+                if (newCoordinates.X == oldCoordinates.X)
                 {
-                    // moved downwards
-                    if (newCoordinates.X == oldCoordinates.X)
-                    {
-                        ProfileManager.AddToDictionary("mouse moved down", "mouse");
+                    return "mouse moved down";
 
-                    }
-                    else
-                    {
-                        //moved diagonally
-                        if (newCoordinates.X < oldCoordinates.X)
-                        {
-                            ProfileManager.AddToDictionary("mouse moved down left", "mouse");
-                        }
-                        else
-                        {
-                            ProfileManager.AddToDictionary("mouse moved down right", "mouse");
-                        }
-                    }
-                }
-                else if (newCoordinates.Y < oldCoordinates.Y)
-                {
-                    // moved upwards
-                    if (newCoordinates.X == oldCoordinates.X)
-                    {
-                        ProfileManager.AddToDictionary("mouse moved up", "mouse");
-                    }
-                    else
-                    {
-                        //moved diagonally
-                        if (newCoordinates.X < oldCoordinates.X)
-                        {
-                            ProfileManager.AddToDictionary("mouse moved up left", "mouse");
-                        }
-                        else
-                        {
-                            ProfileManager.AddToDictionary("mouse moved up right", "mouse");
-                        }
-                    }
 
                 }
                 else
                 {
-                    //moved sideways 
-                    if (newCoordinates.X < oldCoordinates.X)
-                    {
-                        ProfileManager.AddToDictionary("mouse moved left", "mouse");
-                    }
-                    else
-                    {
-                        ProfileManager.AddToDictionary("mouse moved right", "mouse");
-                    }
+                    //moved diagonally
+                    return newCoordinates.X < oldCoordinates.X ? "mouse moved down left" : "mouse moved down right";
                 }
             }
+            else if (newCoordinates.Y < oldCoordinates.Y)
+            {
+                // moved upwards
+                if (newCoordinates.X == oldCoordinates.X)
+                {
+                    return "mouse moved up";
+
+                }
+                else
+                {
+                    //moved diagonally
+                    return newCoordinates.X < oldCoordinates.X ? "mouse moved up left" : "mouse moved up right";
+                }
+
+            }
+            else
+            {
+                //moved sideways 
+                return newCoordinates.X < oldCoordinates.X ? "mouse moved left" : "mouse moved right";
+            }
+
         }
 
         /// <summary>
@@ -177,49 +160,51 @@ namespace KeyCounter
             //get the parameters to which the pointer point to
             LowLevelMouseStructure mouseStruct = (LowLevelMouseStructure)Marshal.PtrToStructure(lParam, typeof(LowLevelMouseStructure));
 
+            Console.WriteLine((int)wParam);
            // add to the CurrentProfile mouse dictionary the corresponding key
             switch ((int)wParam)
             {
-                case 514:
+                case 513:
                     {
                         ProfileManager.AddToDictionary("Mouse button 1", "mouse");
                         break;
                     }
-                case 517:
+                case 516:
                     {
                         ProfileManager.AddToDictionary("Mouse button 2", "mouse");
                         break;
                     }
-                case 520:
+                case 519:
                     {
                         ProfileManager.AddToDictionary("Middle mouse button", "mouse");
                         break;
                     }
-                case 524:
+                case 523:
                     {
-                        int button = 3 + Int16.Parse(mouseStruct.MouseData.ToString("X")) / 10000;
+                        int button = 3 + short.Parse(mouseStruct.MouseData.ToString("X")) / 10000;
                         ProfileManager.AddToDictionary("Mouse button " + button.ToString(), "mouse");
                         break;
                     }
                 case 522:
+                {
+                    if (((_lastMouseWheelMovement >= 0 && mouseStruct.MouseData < 0) || (_lastMouseWheelMovement <= 0 && mouseStruct.MouseData > 0)) || mouseStruct.TimeStamp - _lastMouseUpdate > 1500)
                     {
-                        if (mouseStruct.MouseData > 0)
-                        {
-                            ProfileManager.AddToDictionary("Mouse wheel forward", "mouse");
-                        }
-                        else
-                        {
-                            ProfileManager.AddToDictionary("Mouse wheel backwards", "mouse");
-                        }
-                        break;
+                        _lastMouseWheelMovement = mouseStruct.MouseData;
+                        _lastMouseUpdate = (int)mouseStruct.TimeStamp;
+                        ProfileManager.AddToDictionary(mouseStruct.MouseData > 0 ? "Mouse wheel forward" : "Mouse wheel backwards", "mouse");
                     }
-                default:
+                    break;
+                }
+                case 512:
                     {
-                        if (mouseStruct.TimeStamp - _lastMouseUpdate > 15)
+                        string direction = MovementDirection(_mousePos, mouseStruct.Point);
+                        if ((mouseStruct.TimeStamp - _lastMouseUpdate > 1000 || direction != _lastMouseMovement) && direction != null)
                         {
-                            _lastMouseUpdate = (Int32)mouseStruct.TimeStamp;
-                            MovementDirection(_mousePos, mouseStruct.Point);
+                            _lastMouseWheelMovement = 0;
+                            _lastMouseUpdate = (int)mouseStruct.TimeStamp;
                             _mousePos = mouseStruct.Point;
+                            ProfileManager.AddToDictionary(direction, "mouse");
+                            _lastMouseMovement = direction;
                         }
                         break;
                     }
