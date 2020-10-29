@@ -671,9 +671,7 @@ namespace KeyCounter
                         CurrentProfile.TotalKeys.Dictionary[key].ReplaceImage(GamepadImages.GetImageForKey(key));
                     }
 
-                    CurrentProfile.KeyboardKeys.EnableEvents();
-                    CurrentProfile.MouseKeys.EnableEvents();
-                    CurrentProfile.GamepadKeys.EnableEvents();
+                    collectionsComboBox_SelectedIndexChanged(null, null);
                 }
                 else
                 {

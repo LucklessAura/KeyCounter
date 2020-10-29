@@ -52,6 +52,10 @@ namespace KeyCounter
         /// <returns>an Image corresponding to the provided key</returns>
         public static Image GetImageForKey(string key)
         {
+            if (_keyboardImages == null)
+            {
+                return null;
+            }
             //verify if the image is in the dictionary, if yes return it
             if (_keyboardImages.ContainsKey(key))
             {
@@ -150,6 +154,10 @@ namespace KeyCounter
         /// <returns> an Image corresponding to the provided key</returns>
         public static Image GetImageForKey(string key)
         {
+            if (_mouseImages == null)
+            {
+                return null;
+            }
             if (_mouseImages.ContainsKey(key))
             {
                 return _mouseImages[key];
@@ -236,6 +244,10 @@ namespace KeyCounter
         /// <returns> an Image corresponding to the provided key</returns>
         public static Image GetImageForKey(string key)
         {
+            if (_gamepadImages == null)
+            {
+                return null;
+            }
             if (_gamepadImages.ContainsKey(key))
             {
                 return _gamepadImages[key];

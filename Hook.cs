@@ -160,7 +160,6 @@ namespace KeyCounter
             //get the parameters to which the pointer point to
             LowLevelMouseStructure mouseStruct = (LowLevelMouseStructure)Marshal.PtrToStructure(lParam, typeof(LowLevelMouseStructure));
 
-            Console.WriteLine((int)wParam);
            // add to the CurrentProfile mouse dictionary the corresponding key
             switch ((int)wParam)
             {
