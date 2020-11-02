@@ -126,13 +126,11 @@ namespace KeyCounter
         private static void HandleGamepadInitialLoad()
         {
             //clear the image list and list view
-            _imageList.Images.Clear();
             _keysListView.Items.Clear();
 
             // add all the values in the dictionary to the list view and image view respectively
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.GamepadKeys)
             {
-                _imageList.Images.Add(item.Key, item.Value.Image);
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
 
@@ -182,14 +180,10 @@ namespace KeyCounter
         /// </summary>
         private static void HandleMouseInitialLoad()
         {
-            _imageList.Images.Clear();
             _keysListView.Items.Clear();
-
             // add all the values in the dictionary to the list view and image view respectively
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.MouseKeys)
             {
-
-                _imageList.Images.Add(item.Key, item.Value.Image);
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
 
@@ -203,13 +197,11 @@ namespace KeyCounter
         /// </summary>
         private static void HandleKeyboardInitialLoad()
         {
-            _imageList.Images.Clear();
             _keysListView.Items.Clear();
-
             // add all the values in the dictionary to the list view and image view respectively
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.KeyboardKeys)
             {
-                _imageList.Images.Add(item.Key, item.Value.Image);
+
                _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
 

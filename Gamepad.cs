@@ -143,7 +143,7 @@ namespace KeyCounter
                 string key = keystroke.VirtualKey.ToString();
                 // necessary to make the difference between the keys on the keyboard and
                 // those on the gamepad in the dictionary that contains all of them
-                if (key == "A" || key == "B" || key == "Y" || key == "X")
+                if (key == "A" || key == "B" || key == "Y" || key == "X" || key == "Back")
                 {
                     key = "gamepad" + key;
                 }

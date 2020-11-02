@@ -109,6 +109,9 @@
     <None Update="Icons\Gamepad\gamepadB.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Icons\Gamepad\gamepadBack.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Icons\Gamepad\gamepadX.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

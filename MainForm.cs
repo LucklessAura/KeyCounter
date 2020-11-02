@@ -120,9 +120,9 @@ namespace KeyCounter
             _gamepad.OnNoGamepadFoundStatus += () => { MessageBox.Show("No gamepad connected found"); };
 
 
-            KeyboardImages.Initialize();
-            MouseImages.Initialize();
-            GamepadImages.Initialize();
+            KeyboardImages.Initialize(_imageList);
+            MouseImages.Initialize(_imageList);
+            GamepadImages.Initialize(_imageList);
 
 
 
@@ -240,6 +240,8 @@ namespace KeyCounter
             _imageList.ImageSize = new Size(100, 53);
 
             keysListView.LargeImageList = _imageList;
+
+
         }
 
         /// <summary>
@@ -444,12 +446,10 @@ namespace KeyCounter
                     }
                 case "Total":
                     {
-                        _imageList.Images.Clear();
                         keysListView.Clear();
 
                         foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
                         {
-                            _imageList.Images.Add(item.Key, item.Value.Image);
                             keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
                         }
 
@@ -643,17 +643,17 @@ namespace KeyCounter
                 CurrentProfile.MouseKeys.DisableEvents();
                 CurrentProfile.GamepadKeys.DisableEvents();
 
-                KeyboardImages.UnloadImages();
-                MouseImages.UnloadImages();
-                GamepadImages.UnloadImages();
+                KeyboardImages.UnloadImages(_imageList);
+                MouseImages.UnloadImages(_imageList);
+                GamepadImages.UnloadImages(_imageList);
             }
             else if (this.Visible)
             {
                 if (_first == false)
                 {
-                    KeyboardImages.Initialize();
-                    MouseImages.Initialize();
-                    GamepadImages.Initialize();
+                    KeyboardImages.Initialize(_imageList);
+                    MouseImages.Initialize(_imageList);
+                    GamepadImages.Initialize(_imageList);
 
                     List<string> keys = CurrentProfile.KeyboardKeys.Dictionary.Keys.ToList();
 

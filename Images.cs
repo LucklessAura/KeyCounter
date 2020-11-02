@@ -28,7 +28,7 @@ namespace KeyCounter
         /// <summary>
         /// initialize dictionary with all images in the corresponding folder
         /// </summary>
-        public static void Initialize()
+        public static void Initialize(ImageList imageList)
         {
             if (_keyboardImages == null)
             {
@@ -37,7 +37,9 @@ namespace KeyCounter
                 {
                     if (image.EndsWith(".png"))
                     {
-                        _keyboardImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                        Image img = Image.FromFile(image);
+                        _keyboardImages.Add(Path.GetFileNameWithoutExtension(image), img);
+                        imageList.Images.Add(Path.GetFileNameWithoutExtension(image), img);
                     }
                 }
             }
@@ -97,7 +99,7 @@ namespace KeyCounter
             
         }
 
-        public static void UnloadImages()
+        public static void UnloadImages(ImageList imageList)
         {
             if (_keyboardImages != null && _keyboardImages.Count > 0)
             {
@@ -105,6 +107,11 @@ namespace KeyCounter
                 foreach (KeyValuePair<string, Image> pair in _keyboardImages)
                 {
                     pair.Value.Dispose();
+                }
+
+                foreach (Image img in imageList.Images)
+                {
+                    img.Dispose();
                 }
 
                 _keyboardImages = null;
@@ -131,7 +138,7 @@ namespace KeyCounter
         /// <summary>
         ///  Load into memory the images from the corresponding folder
         /// </summary>
-        public static void Initialize()
+        public static void Initialize(ImageList imageList)
         {
             if (_mouseImages == null)
             {
@@ -140,7 +147,9 @@ namespace KeyCounter
                 {
                     if (image.EndsWith(".png"))
                     {
-                        _mouseImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                        Image img = Image.FromFile(image);
+                        _mouseImages.Add(Path.GetFileNameWithoutExtension(image), img);
+                        imageList.Images.Add(Path.GetFileNameWithoutExtension(image), img);
                     }
                 }
             }
@@ -188,7 +197,7 @@ namespace KeyCounter
             }
         }
 
-        public static void UnloadImages()
+        public static void UnloadImages(ImageList imageList)
         {
 
             if (_mouseImages != null && _mouseImages.Count > 0)
@@ -196,6 +205,11 @@ namespace KeyCounter
                 foreach (KeyValuePair<string, Image> pair in _mouseImages)
                 {
                     pair.Value.Dispose();
+                }
+
+                foreach (Image image in imageList.Images)
+                {
+                    image.Dispose();
                 }
 
                 _mouseImages = null;
@@ -220,7 +234,7 @@ namespace KeyCounter
         /// <summary>
         ///  Load into memory the images from the corresponding folder
         /// </summary>
-        public static void Initialize()
+        public static void Initialize(ImageList imageList)
         {
             if (_gamepadImages == null)
             {
@@ -229,7 +243,9 @@ namespace KeyCounter
                 {
                     if (image.EndsWith(".png"))
                     {
-                        _gamepadImages.Add(Path.GetFileNameWithoutExtension(image), Image.FromFile(image));
+                        Image img = Image.FromFile(image);
+                        _gamepadImages.Add(Path.GetFileNameWithoutExtension(image), img);
+                        imageList.Images.Add(Path.GetFileNameWithoutExtension(image), img);
                     }
                 }
             }
@@ -280,7 +296,7 @@ namespace KeyCounter
             }
         }
 
-        public static void UnloadImages()
+        public static void UnloadImages(ImageList imageList)
         {
             if (_gamepadImages != null && _gamepadImages.Count > 0)
             {
@@ -288,6 +304,11 @@ namespace KeyCounter
                 foreach (KeyValuePair<string, Image> pair in _gamepadImages)
                 {
                     pair.Value.Dispose();
+                }
+
+                foreach (Image image in imageList.Images)
+                {
+                    image.Dispose();
                 }
 
                 _gamepadImages = null;
