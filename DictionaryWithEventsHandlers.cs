@@ -210,7 +210,7 @@ namespace KeyCounter
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.KeyboardKeys)
             {
                 _imageList.Images.Add(item.Key, item.Value.Image);
-                _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+               _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
             }
 
             UpdateTimeInvoker(_timeTextBox, _currentProfile);
@@ -226,7 +226,6 @@ namespace KeyCounter
             // add to the image list the last element added in the dictionary
             _imageList.Images.Add(key, KeyboardImages.GetImageForKey(key));
             //add to the list view the element with the count = 1
-
             _keysListView.Items.Add(key, 1.ToString(), key);
 
             UpdateTimeInvoker(_timeTextBox, _currentProfile);

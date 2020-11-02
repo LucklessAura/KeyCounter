@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using IWshRuntimeLibrary;
 
 namespace KeyCounter
@@ -43,7 +44,6 @@ namespace KeyCounter
             InitializeComponent();
 
             InitialSetUp();
-
         }
 
         /// <summary>
@@ -128,6 +128,20 @@ namespace KeyCounter
 
             // if the number of profiles is 0 force the creation of one
             ForceCreateProfile();
+
+
+
+            // set the tool strip for the task-bar icon with the current list of profiles
+            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
+
+            for (int i = 0; i < _options.ProfilesList.Count; i++)
+            {
+                toolStripMenuItems[i] = new ToolStripMenuItem(_options.ProfilesList[i], null, null, _options.ProfilesList[i]);
+            }
+
+            profilesContextMenu.Items.AddRange(toolStripMenuItems);
+
+            taskBarIcon.ContextMenuStrip = profilesContextMenu;
 
             //if the CurrentProfile is not initialized try to initialize it according to the current settings
             if (CurrentProfile.Name == null)
@@ -215,18 +229,7 @@ namespace KeyCounter
                 }
 
             }
-            
-            // set the tool strip for the task-bar icon with the current list of profiles
-            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
-            
-            for (int i = 0; i < _options.ProfilesList.Count; i++)
-            {
-                toolStripMenuItems[i] = new ToolStripMenuItem(_options.ProfilesList[i], null,null, _options.ProfilesList[i]);
-            }
-            
-            profilesContextMenu.Items.AddRange(toolStripMenuItems);
-            
-            taskBarIcon.ContextMenuStrip = profilesContextMenu;
+
 
             // set up the keyboard and mouse hooks
             _keyboard.Initialize();
@@ -234,7 +237,7 @@ namespace KeyCounter
 
 
 
-            _imageList.ImageSize = new Size(150, 80);
+            _imageList.ImageSize = new Size(100, 53);
 
             keysListView.LargeImageList = _imageList;
         }
@@ -302,73 +305,81 @@ namespace KeyCounter
         /// <param name="e"></param>
         private void  profileComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (profileComboBox.Text != CurrentProfile.Name || collectionsComboBox.DataSource == null)
+
+            if (profileComboBox.SelectedItem.ToString() != CurrentProfile.Name || collectionsComboBox.DataSource == null)
             {
 
-                    //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
-                    //and add it to it's count so far and save the profile
-                    _profileStopDate = DateTime.UtcNow;
+                foreach (ToolStripMenuItem item in taskBarIcon.ContextMenuStrip.Items)
+                {
+                    item.Checked = false;
+                }
+                ((ToolStripMenuItem)taskBarIcon.ContextMenuStrip.Items[taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString())]).Checked = true;
 
-                    CurrentProfile.TimeUsed += (float) Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
 
-                    ProfileManager.SaveProfile(CurrentProfile);
+                //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
+                //and add it to it's count so far and save the profile
+                _profileStopDate = DateTime.UtcNow;
 
-                    //try setting the CurrentProfile according to the value of the profileComboBox 
-                    // if this fails try to set the CurrentProfile 
-                    // to the first element in the options profiles list, if the list is empty force the creation of a
-                    // new valid profile
-                    try
+                CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
+
+                ProfileManager.SaveProfile(CurrentProfile);
+
+                //try setting the CurrentProfile according to the value of the profileComboBox 
+                // if this fails try to set the CurrentProfile 
+                // to the first element in the options profiles list, if the list is empty force the creation of a
+                // new valid profile
+                try
+                {
+                    CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
+                }
+                catch (FileNotFoundException)
+                {
+                    MessageBox.Show("4 The file corresponding to " + profileComboBox.SelectedItem +
+                                    " was not found, it will now be removed from memory.");
+
+                    _options.ProfilesList.Remove(profileComboBox.Text);
+                    if (_options.ProfilesList.Count == 0)
                     {
-                        CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        MessageBox.Show("4 The file corresponding to " + profileComboBox.SelectedItem +
-                                        " was not found, it will now be removed from memory.");
-
-                        _options.ProfilesList.Remove(profileComboBox.Text);
-                        if (_options.ProfilesList.Count == 0)
-                        {
-                            ForceCreateProfile();
-                        }
-                        else
-                        {
-                            profileComboBox.SelectedIndex = 0;
-
-                            CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
-                        }
-                    }
-
-                    // set the start date of this profile to the closing one of the last one
-                    ProfileStartDate = _profileStopDate;
-
-
-                    //give the new values for the CurrentProfile, list view and image list to the class
-                    // handling the dictionary events setup 
-                    DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView,
-                        timeUsedTextBox);
-
-                    //set up the handlers for the dictionaries of the newly selected profile
-                    DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
-
-                    // if needed start the gamepad connection and handling processes
-                    if (!CurrentProfile.NeedsGamepad)
-                    {
-                        _gamepad.Stop();
+                        ForceCreateProfile();
                     }
                     else
                     {
-                        _gamepad.Start();
+                        profileComboBox.SelectedIndex = 0;
+
+                        CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
                     }
+                }
 
-                    collectionsComboBox.DataSource = new BindingSource
-                    {
-                        DataSource = CurrentProfile.TypesOfInputList
-                    };
-         
-                    _options.LastSelectedProfile = CurrentProfile.Name;
+                // set the start date of this profile to the closing one of the last one
+                ProfileStartDate = _profileStopDate;
 
-                    profileComboBox.SelectedItem = CurrentProfile.Name;
+
+                //give the new values for the CurrentProfile, list view and image list to the class
+                // handling the dictionary events setup 
+                DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView,
+                    timeUsedTextBox);
+
+                //set up the handlers for the dictionaries of the newly selected profile
+                DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
+
+                // if needed start the gamepad connection and handling processes
+                if (!CurrentProfile.NeedsGamepad)
+                {
+                    _gamepad.Stop();
+                }
+                else
+                {
+                    _gamepad.Start();
+                }
+
+                collectionsComboBox.DataSource = new BindingSource
+                {
+                    DataSource = CurrentProfile.TypesOfInputList
+                };
+
+                _options.LastSelectedProfile = CurrentProfile.Name;
+
+                profileComboBox.SelectedItem = CurrentProfile.Name;
 
             }
 
@@ -389,6 +400,8 @@ namespace KeyCounter
 
             this.ActiveControl = null;
 
+            string name = collectionsComboBox.SelectedItem.ToString();
+
             // disable events for all dictionaries
             CurrentProfile.KeyboardKeys.DisableEvents();
             CurrentProfile.MouseKeys.DisableEvents();
@@ -396,15 +409,13 @@ namespace KeyCounter
 
             //check which dictionary needs to have its events enabled, clear the list view and load the images and counts
             // for the corresponding dictionary
-            switch (collectionsComboBox.SelectedItem.ToString())
+            switch (name)
             {
                 case "Keyboard":
                     {
 
-                        keysListView.Items.Clear();
-                        
-                        _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
 
+                        _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
                         _currentSelectedDictionary.EnableEvents();
 
                         _currentSelectedDictionary.InitialLoad();
@@ -414,10 +425,8 @@ namespace KeyCounter
                     {
 
 
-                        keysListView.Items.Clear();
-                        
-                        _currentSelectedDictionary = CurrentProfile.MouseKeys;
 
+                        _currentSelectedDictionary = CurrentProfile.MouseKeys;
                         _currentSelectedDictionary.EnableEvents();
 
                         CurrentProfile.MouseKeys.InitialLoad();
@@ -425,7 +434,7 @@ namespace KeyCounter
                     }
                 case "Gamepad":
                     {
-                        keysListView.Items.Clear();
+
 
                         _currentSelectedDictionary = CurrentProfile.GamepadKeys;
                         _currentSelectedDictionary.EnableEvents();
@@ -434,13 +443,9 @@ namespace KeyCounter
                         break;
                     }
                 case "Total":
-                    { 
-                        keysListView.Items.Clear();
-                        CurrentProfile.KeyboardKeys.EnableEvents();
-                        CurrentProfile.MouseKeys.EnableEvents();
-                        CurrentProfile.GamepadKeys.EnableEvents();
-
+                    {
                         _imageList.Images.Clear();
+                        keysListView.Clear();
 
                         foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
                         {
@@ -448,14 +453,18 @@ namespace KeyCounter
                             keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
                         }
 
+                        CurrentProfile.KeyboardKeys.EnableEvents();
+                        CurrentProfile.MouseKeys.EnableEvents();
+                        CurrentProfile.GamepadKeys.EnableEvents();
                         break;
                     }
-               default:
+                default:
                     {
                         throw new ArgumentException("Unknown collection");
 
                     }
             }
+
 
         }
 
