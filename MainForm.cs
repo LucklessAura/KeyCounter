@@ -254,6 +254,9 @@ namespace KeyCounter
             
             if (this.WindowState == FormWindowState.Minimized)
             {
+                CurrentProfile.KeyboardKeys.DisableEvents();
+                CurrentProfile.MouseKeys.DisableEvents();
+                CurrentProfile.GamepadKeys.DisableEvents();
                 Hide();
             }
 
