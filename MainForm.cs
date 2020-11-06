@@ -421,9 +421,12 @@ namespace KeyCounter
 
 
                         _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
-                        _currentSelectedDictionary.EnableEvents();
-
-                        _currentSelectedDictionary.InitialLoad();
+                        if (this.Visible)
+                        {
+                            _currentSelectedDictionary.EnableEvents();
+                            _currentSelectedDictionary.InitialLoad();
+                        }
+                        
                         break;
                     }
                 case "Mouse":
@@ -432,9 +435,11 @@ namespace KeyCounter
 
 
                         _currentSelectedDictionary = CurrentProfile.MouseKeys;
-                        _currentSelectedDictionary.EnableEvents();
-
-                        CurrentProfile.MouseKeys.InitialLoad();
+                        if (this.Visible)
+                        {
+                            _currentSelectedDictionary.EnableEvents();
+                            _currentSelectedDictionary.InitialLoad();
+                        }
                         break;
                     }
                 case "Gamepad":
@@ -442,23 +447,30 @@ namespace KeyCounter
 
 
                         _currentSelectedDictionary = CurrentProfile.GamepadKeys;
-                        _currentSelectedDictionary.EnableEvents();
-
-                        CurrentProfile.GamepadKeys.InitialLoad();
+                        if (this.Visible)
+                        {
+                            _currentSelectedDictionary.EnableEvents();
+                            _currentSelectedDictionary.InitialLoad();
+                        }
                         break;
                     }
                 case "Total":
                     {
                         keysListView.Clear();
 
-                        foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
+                        if (this.Visible)
                         {
-                            keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+                            foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
+                            {
+                                keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+                            }
+
+                            CurrentProfile.KeyboardKeys.EnableEvents();
+                            CurrentProfile.MouseKeys.EnableEvents();
+                            CurrentProfile.GamepadKeys.EnableEvents();
+
                         }
 
-                        CurrentProfile.KeyboardKeys.EnableEvents();
-                        CurrentProfile.MouseKeys.EnableEvents();
-                        CurrentProfile.GamepadKeys.EnableEvents();
                         break;
                     }
                 default:
