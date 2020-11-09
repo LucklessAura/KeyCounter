@@ -132,6 +132,11 @@ namespace KeyCounter
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.GamepadKeys)
             {
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+                if (!_imageList.Images.ContainsKey(item.Key))
+                {
+                    _imageList.Images.Add(item.Key, KeyboardImages.GetImageForKey(item.Key));
+
+                }
             }
 
 
@@ -185,6 +190,11 @@ namespace KeyCounter
             foreach (KeyValuePair<string, CustomPair> item in _currentProfile.MouseKeys)
             {
                 _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+                if (!_imageList.Images.ContainsKey(item.Key))
+                {
+                    _imageList.Images.Add(item.Key, KeyboardImages.GetImageForKey(item.Key));
+
+                }
             }
 
 
@@ -203,6 +213,11 @@ namespace KeyCounter
             {
 
                _keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
+               if (!_imageList.Images.ContainsKey(item.Key))
+               {
+                   _imageList.Images.Add(item.Key, KeyboardImages.GetImageForKey(item.Key));
+
+               }
             }
 
             UpdateTimeInvoker(_timeTextBox, _currentProfile);

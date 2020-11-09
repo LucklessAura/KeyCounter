@@ -82,6 +82,7 @@ namespace KeyCounter
 
                         profileComboBox_SelectedIndexChanged(null, null);
 
+
                     }
                     catch (FileNotFoundException)
                     {
@@ -119,29 +120,24 @@ namespace KeyCounter
             _gamepad.OnGamepadDisconnectStatus += () => { MessageBox.Show("Gamepad disconnected"); };
             _gamepad.OnNoGamepadFoundStatus += () => { MessageBox.Show("No gamepad connected found"); };
 
+            _imageList.ImageSize = new Size(100, 53);
+
+            keysListView.LargeImageList = _imageList;
+
 
             KeyboardImages.Initialize(_imageList);
             MouseImages.Initialize(_imageList);
             GamepadImages.Initialize(_imageList);
 
 
+            
 
             // if the number of profiles is 0 force the creation of one
             ForceCreateProfile();
 
 
 
-            // set the tool strip for the task-bar icon with the current list of profiles
-            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
-
-            for (int i = 0; i < _options.ProfilesList.Count; i++)
-            {
-                toolStripMenuItems[i] = new ToolStripMenuItem(_options.ProfilesList[i], null, null, _options.ProfilesList[i]);
-            }
-
-            profilesContextMenu.Items.AddRange(toolStripMenuItems);
-
-            taskBarIcon.ContextMenuStrip = profilesContextMenu;
+            
 
             //if the CurrentProfile is not initialized try to initialize it according to the current settings
             if (CurrentProfile.Name == null)
@@ -235,13 +231,17 @@ namespace KeyCounter
             _keyboard.Initialize();
             _mouse.Initialize();
 
+            // set the tool strip for the task-bar icon with the current list of profiles
+            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
 
+            for (int i = 0; i < _options.ProfilesList.Count; i++)
+            {
+                toolStripMenuItems[i] = new ToolStripMenuItem(_options.ProfilesList[i], null, null, _options.ProfilesList[i]);
+            }
 
-            _imageList.ImageSize = new Size(100, 53);
+            profilesContextMenu.Items.AddRange(toolStripMenuItems);
 
-            keysListView.LargeImageList = _imageList;
-
-
+            taskBarIcon.ContextMenuStrip = profilesContextMenu;
         }
 
         /// <summary>
@@ -314,11 +314,20 @@ namespace KeyCounter
             if (profileComboBox.SelectedItem.ToString() != CurrentProfile.Name || collectionsComboBox.DataSource == null)
             {
 
-                foreach (ToolStripMenuItem item in taskBarIcon.ContextMenuStrip.Items)
+                if (taskBarIcon.ContextMenuStrip != null)
                 {
-                    item.Checked = false;
+                    foreach (ToolStripMenuItem item in taskBarIcon.ContextMenuStrip.Items)
+                    {
+                        item.Checked = false;
+                    }
+
+                    if (taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString()) >=0 )
+                    {
+                        ((ToolStripMenuItem)taskBarIcon.ContextMenuStrip.Items[taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString())]).Checked = true;
+
+                    }
+
                 }
-                ((ToolStripMenuItem)taskBarIcon.ContextMenuStrip.Items[taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString())]).Checked = true;
 
 
                 //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
@@ -386,6 +395,8 @@ namespace KeyCounter
 
                 profileComboBox.SelectedItem = CurrentProfile.Name;
 
+                collectionsComboBox_SelectedIndexChanged(null,null);
+
             }
 
             this.ActiveControl = null;
@@ -418,10 +429,8 @@ namespace KeyCounter
             {
                 case "Keyboard":
                     {
-
-
                         _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
-                        if (this.Visible)
+                        if (this.Visible || _first)
                         {
                             _currentSelectedDictionary.EnableEvents();
                             _currentSelectedDictionary.InitialLoad();
@@ -431,11 +440,8 @@ namespace KeyCounter
                     }
                 case "Mouse":
                     {
-
-
-
                         _currentSelectedDictionary = CurrentProfile.MouseKeys;
-                        if (this.Visible)
+                        if (this.Visible || _first)
                         {
                             _currentSelectedDictionary.EnableEvents();
                             _currentSelectedDictionary.InitialLoad();
@@ -445,9 +451,8 @@ namespace KeyCounter
                 case "Gamepad":
                     {
 
-
                         _currentSelectedDictionary = CurrentProfile.GamepadKeys;
-                        if (this.Visible)
+                        if (this.Visible || _first)
                         {
                             _currentSelectedDictionary.EnableEvents();
                             _currentSelectedDictionary.InitialLoad();
@@ -662,8 +667,9 @@ namespace KeyCounter
                 MouseImages.UnloadImages(_imageList);
                 GamepadImages.UnloadImages(_imageList);
             }
-            else if (this.Visible)
+            else if (this.Visible && _options.UnloadImages)
             {
+                Console.WriteLine("{0}  poate", _first);
                 if (_first == false)
                 {
                     KeyboardImages.Initialize(_imageList);
@@ -702,6 +708,11 @@ namespace KeyCounter
                     _first = false;
                 }
                 
+            }
+            else if (this.Visible && _options.UnloadImages == false)
+            {
+                collectionsComboBox_SelectedIndexChanged(null,null);
+                _first = false;
             }
         }
     }

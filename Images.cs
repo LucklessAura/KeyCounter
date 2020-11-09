@@ -56,6 +56,7 @@ namespace KeyCounter
         {
             if (_keyboardImages == null)
             {
+                Console.Write("da");
                 return null;
             }
             //verify if the image is in the dictionary, if yes return it
@@ -74,6 +75,11 @@ namespace KeyCounter
                 else
                 {
                     _tempImage = (Image)_keyboardImages["base_key"].Clone();
+                }
+
+                if (_tempImage == null)
+                {
+                    Console.WriteLine("da");
                 }
                 using (Graphics g = Graphics.FromImage(_tempImage))
                 {
