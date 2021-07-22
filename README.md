@@ -14,7 +14,7 @@ The app in itself is made to be used mostly hidden, but it does have a UI to fac
 
 The main window of the app looks like this  
 
-<img src = "images for readme and install/mainForm.PNG" width = "500"><br>  
+<img src = "Images for readme and install/mainForm.PNG" width = "500"><br>  
   
 
 this window shows the images and counts for a device, the time spent in the current profile as well as 
@@ -24,7 +24,7 @@ changing the image or name of a key and access to the settings of the app.
 
 Right clicking on a key from the list opens the following window
 
-<img src = "images for readme and install/renameWindow.PNG"><br>
+<img src = "Images for readme and install/renameWindow.PNG"><br>
 
 from here the name of the key can be changed, this will also change the name on the image to match, 
 or a custom _png_ can be chosen to replace the current image.  
@@ -34,7 +34,7 @@ or a custom _png_ can be chosen to replace the current image.
 The startup options and profiles location can be seen and modified from the options window  
   
 
-<img src = "images for readme and install/optionsWindow.PNG"><br><br>
+<img src = "Images for readme and install/optionsWindow.PNG"><br><br>
 ## How is the monitoring performed
 
 [Mouse](https://docs.microsoft.com/en-us/windows/win32/winmsg/about-hooks#wh_mouse_ll) and [keyboard](https://docs.microsoft.com/en-us/windows/win32/winmsg/about-hooks#wh_keyboard_ll) monitoring is performed using hooks, every time a key is pressed or a movement is detected 
