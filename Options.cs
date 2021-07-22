@@ -1,120 +1,152 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Windows.Forms;
-// ReSharper disable FieldCanBeMadeReadOnly.Local
-// ReSharper disable All
 
 namespace KeyCounter
 {
-    /// <summary>
-    /// Class defining the options for the program and the corresponding operations
-    /// </summary>
-    public class Options
+    public class Options : INotifyPropertyChanged 
     {
-    
         public bool AutoStart { get; set; }
         public string ProfilesLocation { get; set; }
-        public string LastSelectedProfile { get; set; }
+        public string LastUsedProfile { get; set; }
         public bool UseLastProfile { get; set; }
         public bool StartMinimized { get; set; }
-        public bool UnloadImages { get; set; }
         public string OnStartProfile { get; set; }
-        public BindingList<string> ProfilesList { get; set; }
+        public BindingList<string> ProfileList { get; set; }
         
-
-        private string _execDirectoryPath;
-
-        /// <summary>
-        /// Create a new options instance and set the folder where the executable for the current instance of the options
-        /// </summary>
         public Options()
         {
-            this._execDirectoryPath = Path.GetDirectoryName(Application.ExecutablePath);
+            //Console.WriteLine("New options object created");
         }
 
         /// <summary>
-        /// Reset the current options to their default values, if the <c>deleteProfiles</c> value is true also reset the 
-        /// profiles list 
+        /// Creates default options, if resetProfileList is false then the current list of profiles is kept, else it is reset to default
         /// </summary>
-        /// <param name="deleteProfiles">determines if the profiles list should be reset or kept</param>
-        public void ResetToDefaultOptions(bool deleteProfiles)
+        /// <param name="resetProfileList"></param>
+        public void MakeOptionsDefault(bool resetProfileList)
         {
-            AutoStart = false;
-            ProfilesLocation = Path.Join(Path.GetDirectoryName(Application.ExecutablePath), "Profiles");
-            LastSelectedProfile = "";
-            UseLastProfile = true;
-            OnStartProfile = "";
-            StartMinimized = false;
-            UnloadImages = false;
-            if (deleteProfiles == true || ProfilesList == null)
+            try
             {
-                ProfilesList = new BindingList<string>();
-            }
-        }
-
-        /// <summary>
-        /// JSON serialize the current options to the corresponding file in the app folder
-        /// </summary>
-        public void SaveOptionsToFile()
-        {
-            using (StreamWriter sw = File.CreateText(_execDirectoryPath + "\\" + "options.cfg"))
-            {
-                JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                };
-                sw.Write(JsonSerializer.Serialize(this, jsonSerializerOptions));
-            }
-        }
-
-        /// <summary>
-        /// Try to deserialize a options file, if the file does not exist create one with default options and a Profiles folder
-        /// </summary>
-        public void ReadOrCreateOptionsFile()
-        {
-            string[] files = Directory.GetFiles(_execDirectoryPath);
-
-            for (int i = 0; i < files.Length; i++)
-            {
-                files[i] = Path.GetFileName(files[i]);
-            }
-
+                AutoStart = false;
+                ProfilesLocation = Path.Join(Program.AppDataPath, "Profiles");
+                LastUsedProfile = null;
+                UseLastProfile = true;
+                StartMinimized = false;
+                OnStartProfile = null;
             
-            // check if an options.cfg file exist in the apps folder, if it exists deserialize it in a <c>readOptions</c>
-            // variable and copy the read options to the current Options object
-
-            if (files.Contains("options.cfg"))
-            {
-                string textOptions = System.IO.File.ReadAllText(_execDirectoryPath + "\\" + "options.cfg");
-                Options readOptions = JsonSerializer.Deserialize<Options>(textOptions);
-                this.LastSelectedProfile = readOptions.LastSelectedProfile;
-                this.OnStartProfile = readOptions.OnStartProfile;
-                this.ProfilesList = readOptions.ProfilesList;
-                this.ProfilesLocation = readOptions.ProfilesLocation;
-                this.UseLastProfile = readOptions.UseLastProfile;
-                this.AutoStart = readOptions.AutoStart;
-                this.StartMinimized = readOptions.StartMinimized;
-                this.UnloadImages = readOptions.UnloadImages;
+                if(resetProfileList)
+                    // don't also delete the files of the previous profiles in case the options were reset to default cause of a corrupted options file
+                    ProfileList = new BindingList<string>(){"Default"};
             }
-            else
+            catch (Exception e)
             {
-                try
+                if (e is ChainingException exception)
                 {
-                    if (!Directory.Exists(_execDirectoryPath + "\\" + "Profiles"))
+                    exception.AddErrorToChain("While trying to default options");
+                }
+                else
+                {
+                    exception = new ChainingException(e.Message);
+                    exception.AddErrorToChain("While trying to default options");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// JSON serializes the current options
+        /// </summary>
+        public void WriteOptions()
+        {
+            try
+            {
+                using (StreamWriter sw = File.CreateText(Program.AppDataPath + "\\" + "options.cfg"))
+                {
+                    JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
                     {
-                        System.IO.Directory.CreateDirectory(_execDirectoryPath + "\\" + "Profiles");
+                        WriteIndented = true
+                    };
+                    sw.Write(JsonSerializer.Serialize(this, jsonSerializerOptions));
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to write options");
+                }
+                else
+                {
+                    exception = new ChainingException(e.Message);
+                    exception.AddErrorToChain("While trying to write options");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Tries to read the options, if the file does not exist then create new options with default values and save them
+        /// </summary>
+        public void ReadOrCreateOptions()
+        {
+            try
+            {
+                if (File.Exists(Program.AppDataPath + "\\" + "options.cfg"))
+                {
+                    string textOptions = File.ReadAllText(Program.AppDataPath + "\\" + "options.cfg");
+                    try
+                    {
+                        //Console.WriteLine("Trying to read options");
+                        // am making options to create options, creates recursive behaviour and stack overflows
+                        var options = JsonSerializer.Deserialize<Options>(textOptions);
+                        AutoStart = options.AutoStart;
+                        ProfilesLocation = options.ProfilesLocation ?? throw new Exception("Null option");
+                        LastUsedProfile = options.LastUsedProfile ;
+                        UseLastProfile = options.UseLastProfile;
+                        StartMinimized = options.StartMinimized;
+                        OnStartProfile = options.OnStartProfile;
+                        ProfileList = options.ProfileList ?? throw new Exception("Null option");
+                    }
+                    catch (Exception)
+                    {
+                        MakeOptionsDefault(true);
+                        WriteOptions();
+                        throw new ChainingException("Options file corrupted, created new file with default settings");
                     }
                 }
-                catch (Exception)
+                else
                 {
-                    throw;
+                    //assume that it is a first time setup, probably could have created files using the installer, but meh
+                    ProfileManager.CreateNewProfile(Path.Join(Program.AppDataPath, "Profiles"), "Default", false);
+                    MakeOptionsDefault(true);
+                    WriteOptions();
                 }
-                this.ResetToDefaultOptions(true);
-                SaveOptionsToFile();
             }
+            catch (Exception e)
+            {
+                if (e is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to read options");
+                }
+                else
+                {
+                    exception = new ChainingException(e.Message);
+                    exception.AddErrorToChain("While trying to read options");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

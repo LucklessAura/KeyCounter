@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
@@ -11,21 +12,73 @@ namespace KeyCounter
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
+
+        public static keyCounterMainFrame_frame MainFrame;
+        public static readonly string AppDataPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KeyCounter");
+        public static readonly string CommonAppsData = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "KeyCounter");
+        
+
         [STAThread]
         static void Main()
         {
-
-            // Verify if there already exists an instance of this app, if it exists show a message else start the app.
-            using (Mutex mutex = new Mutex(true,"KeyCounter",out bool createNew))
+            using (Mutex mutex = new Mutex(true, "KeyCounter", out bool createNew))
             {
+                
                 if (createNew)
                 {
-                    Application.SetHighDpiMode(HighDpiMode.SystemAware);
+                    if (!Directory.Exists(AppDataPath))
+                    {
+                        Directory.CreateDirectory(AppDataPath);
+                    }
+                    
                     Application.EnableVisualStyles();
+                    Application.SetHighDpiMode(Application.HighDpiMode);
                     Application.SetCompatibleTextRenderingDefault(false);
-                    Application.ThreadException += HandleExceptions;
-                    AppDomain.CurrentDomain.UnhandledException += HandleExceptions;
-                    Application.Run(new MainForm());       
+                    Application.ThreadException += Application_ThreadException;
+                    Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+                    AppDomain.CurrentDomain.UnhandledException += Application_UnhandledException;
+                    
+                     // while the other 2 handlers catch almost all exceptions this is the only way of getting the ones when the keyCounterMainFrame_frame fails to initialize
+                     try
+                     {
+                         MainFrame = new keyCounterMainFrame_frame();
+                         Application.Run(MainFrame);
+                     }
+                     catch (Exception e)
+                     {
+                         //not stopping this might lead to even more errors
+                         KeyboardHookClass.DeleteKeyboardHook();
+                         MouseHookClass.DeleteMouseHook();
+                         GamepadHookClass.DestroyTimer();
+
+                         if (e is ChainingException exception)
+                         {
+                             using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                             {
+                                 sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                                 foreach (var cause in exception.GetExceptionChain())
+                                 {
+                                     sw.WriteLine(cause);
+                                 }
+                                 sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                             }
+                         }
+                         else
+                         {
+                             using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                             {
+                                 var ex = e;
+                                 sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                                 if (ex != null) sw.WriteLine(ex.Message);
+                                 sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                             }
+                         }
+                         
+                         MessageBox.Show("An exception occurred, for more info see the logs.", "ERROR", MessageBoxButtons.OK,
+                             MessageBoxIcon.Error);
+                         Application.Exit();
+                     }
+                    
                 }
                 else
                 {
@@ -43,39 +96,75 @@ namespace KeyCounter
 
         }
 
-        /// <summary>
-        /// Handler to write to a logs file all uncaught exceptions.
-        /// </summary>
-        private static void HandleExceptions(object sender, ThreadExceptionEventArgs e)
+        static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
         {
-            using (StreamWriter sw = File.AppendText(Path.GetDirectoryName(Application.ExecutablePath) + "\\" + "Logs.txt"))
-            {
-                sw.WriteLine(DateTime.Now);
-                sw.WriteLine(e.Exception.Data + "\n");
-                sw.WriteLine(e.Exception.Message + "\n");
-                sw.WriteLine(e.Exception.InnerException + "\n");
-                sw.WriteLine(e.Exception.StackTrace + "\n");
-                sw.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+            //not stopping this might lead to even more errors
+            KeyboardHookClass.DeleteKeyboardHook();
+            MouseHookClass.DeleteMouseHook();
+            GamepadHookClass.DestroyTimer();
 
+            if (e.Exception is ChainingException exception)
+            {
+                using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                {
+                    sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    foreach (var cause in exception.GetExceptionChain())
+                    {
+                        sw.WriteLine(cause);
+                    }
+                    sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                }
             }
-            MessageBox.Show("An exception occured, see log files for more info. The app wil now exit");
+            else
+            {
+                using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                {
+                    sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    sw.WriteLine(e.Exception.Message);
+                    sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                }
+            }
+
+            MessageBox.Show("An exception occurred, for more info see the logs.", "ERROR", MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             Application.Exit();
         }
 
-        /// <summary>
-        /// Handler to write to a logs file all uncaught exceptions.
-        /// </summary>
-        private static void HandleExceptions(object sender, UnhandledExceptionEventArgs e)
-        {
-            using (StreamWriter sw = File.AppendText(Path.GetDirectoryName(Application.ExecutablePath) + "\\" + "Logs.txt"))
-            {
-                sw.WriteLine(DateTime.Now);
-                sw.WriteLine(e.ExceptionObject.ToString() + "\n");
-                sw.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
+        static void Application_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            //not stopping this might lead to even more errors
+            KeyboardHookClass.DeleteKeyboardHook();
+            MouseHookClass.DeleteMouseHook();
+            GamepadHookClass.DestroyTimer();
+
+            if (e.ExceptionObject is ChainingException exception)
+            {
+                using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                {
+                    sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    foreach (var cause in exception.GetExceptionChain())
+                    {
+                        sw.WriteLine(cause);
+                    }
+                    sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                }
             }
-            MessageBox.Show("An exception occured, see log files for more info. The app wil now exit");
+            else
+            {
+                using (StreamWriter sw = File.AppendText(AppDataPath + "\\logs.log"))
+                {
+                    var ex = e.ExceptionObject as Exception;
+                    sw.WriteLine(DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    if (ex != null) sw.WriteLine(ex.Message);
+                    sw.WriteLine("\n~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~\n");
+                }
+            }
+
+            MessageBox.Show("An exception occurred, for more info see the logs.", "ERROR", MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
             Application.Exit();
         }
+
     }
 }

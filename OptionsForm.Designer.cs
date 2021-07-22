@@ -1,4 +1,5 @@
-﻿namespace KeyCounter
+﻿
+namespace KeyCounter
 {
     partial class OptionsForm
     {
@@ -28,147 +29,128 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.startWithWindowsCheckBox = new System.Windows.Forms.CheckBox();
-            this.profilesLocationFileBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
-            this.profilesLocationTextBox = new System.Windows.Forms.TextBox();
-            this.profilesLocationLabel = new System.Windows.Forms.Label();
-            this.saveButton = new System.Windows.Forms.Button();
-            this.onStartProfileCheckBox = new System.Windows.Forms.CheckBox();
-            this.changePathButton = new System.Windows.Forms.Button();
-            this.profilesComboBox = new System.Windows.Forms.ComboBox();
-            this.profilesLabel = new System.Windows.Forms.Label();
-            this.resetToDefaultButton = new System.Windows.Forms.Button();
-            this.startMinimisedCheckBox = new System.Windows.Forms.CheckBox();
-            this.unloadImagesCheckBox = new System.Windows.Forms.CheckBox();
+            System.Windows.Forms.Label profilesFolder_label;
+            System.Windows.Forms.Label startProfile_label;
+            this.autoStart_checkBox = new System.Windows.Forms.CheckBox();
+            this.profilesLocation_textBox = new System.Windows.Forms.TextBox();
+            this.useLastProfile_checkBox = new System.Windows.Forms.CheckBox();
+            this.startMinimised_checkBox = new System.Windows.Forms.CheckBox();
+            this.onStartProfile_comboBox = new System.Windows.Forms.ComboBox();
+            this.changeProfilesLocation_button = new System.Windows.Forms.Button();
+            this.profilesLocation_folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
+            this.fileMover_backgroundWorker = new System.ComponentModel.BackgroundWorker();
+            profilesFolder_label = new System.Windows.Forms.Label();
+            startProfile_label = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // startWithWindowsCheckBox
+            // profilesFolder_label
             // 
-            this.startWithWindowsCheckBox.AutoSize = true;
-            this.startWithWindowsCheckBox.Location = new System.Drawing.Point(12, 28);
-            this.startWithWindowsCheckBox.Name = "startWithWindowsCheckBox";
-            this.startWithWindowsCheckBox.Size = new System.Drawing.Size(130, 19);
-            this.startWithWindowsCheckBox.TabIndex = 0;
-            this.startWithWindowsCheckBox.Text = "Start With Windows";
-            this.startWithWindowsCheckBox.UseVisualStyleBackColor = true;
+            profilesFolder_label.AutoSize = true;
+            profilesFolder_label.Location = new System.Drawing.Point(12, 65);
+            profilesFolder_label.Name = "profilesFolder_label";
+            profilesFolder_label.Size = new System.Drawing.Size(82, 15);
+            profilesFolder_label.TabIndex = 7;
+            profilesFolder_label.Text = "Profiles Folder";
             // 
-            // profilesLocationTextBox
+            // startProfile_label
             // 
-            this.profilesLocationTextBox.Location = new System.Drawing.Point(12, 122);
-            this.profilesLocationTextBox.Name = "profilesLocationTextBox";
-            this.profilesLocationTextBox.ReadOnly = true;
-            this.profilesLocationTextBox.Size = new System.Drawing.Size(215, 23);
-            this.profilesLocationTextBox.TabIndex = 1;
-            this.profilesLocationTextBox.DoubleClick += new System.EventHandler(this.ProfilesLocationTextBox_DoubleClick);
+            startProfile_label.AutoSize = true;
+            startProfile_label.Location = new System.Drawing.Point(206, 188);
+            startProfile_label.Name = "startProfile_label";
+            startProfile_label.Size = new System.Drawing.Size(68, 15);
+            startProfile_label.TabIndex = 8;
+            startProfile_label.Text = "Start Profile";
             // 
-            // profilesLocationLabel
+            // autoStart_checkBox
             // 
-            this.profilesLocationLabel.AutoSize = true;
-            this.profilesLocationLabel.Location = new System.Drawing.Point(12, 104);
-            this.profilesLocationLabel.Name = "profilesLocationLabel";
-            this.profilesLocationLabel.Size = new System.Drawing.Size(131, 15);
-            this.profilesLocationLabel.TabIndex = 2;
-            this.profilesLocationLabel.Text = "Profiles Folder Location";
+            this.autoStart_checkBox.AutoSize = true;
+            this.autoStart_checkBox.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.autoStart_checkBox.Location = new System.Drawing.Point(12, 12);
+            this.autoStart_checkBox.Name = "autoStart_checkBox";
+            this.autoStart_checkBox.Size = new System.Drawing.Size(127, 19);
+            this.autoStart_checkBox.TabIndex = 0;
+            this.autoStart_checkBox.Text = "Start With Windows";
+            this.autoStart_checkBox.UseVisualStyleBackColor = true;
+            this.autoStart_checkBox.CheckedChanged += new System.EventHandler(this.autoStart_checkBox_CheckedChanged);
             // 
-            // saveButton
+            // profilesLocation_textBox
             // 
-            this.saveButton.Location = new System.Drawing.Point(43, 305);
-            this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(114, 23);
-            this.saveButton.TabIndex = 3;
-            this.saveButton.Text = "Save";
-            this.saveButton.UseVisualStyleBackColor = true;
-            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
+            this.profilesLocation_textBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.profilesLocation_textBox.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.profilesLocation_textBox.Location = new System.Drawing.Point(11, 83);
+            this.profilesLocation_textBox.Multiline = true;
+            this.profilesLocation_textBox.Name = "profilesLocation_textBox";
+            this.profilesLocation_textBox.ReadOnly = true;
+            this.profilesLocation_textBox.Size = new System.Drawing.Size(264, 41);
+            this.profilesLocation_textBox.TabIndex = 1;
+            this.profilesLocation_textBox.Text = "Profiles location";
+            this.profilesLocation_textBox.DoubleClick += new System.EventHandler(this.profilesLocation_textBox_DoubleClick);
             // 
-            // onStartProfileCheckBox
+            // useLastProfile_checkBox
             // 
-            this.onStartProfileCheckBox.AutoSize = true;
-            this.onStartProfileCheckBox.Location = new System.Drawing.Point(12, 174);
-            this.onStartProfileCheckBox.Name = "onStartProfileCheckBox";
-            this.onStartProfileCheckBox.Size = new System.Drawing.Size(215, 19);
-            this.onStartProfileCheckBox.TabIndex = 4;
-            this.onStartProfileCheckBox.Text = "On Start Select The Last Used Profile";
-            this.onStartProfileCheckBox.UseVisualStyleBackColor = true;
-            this.onStartProfileCheckBox.CheckedChanged += new System.EventHandler(this.OnStartProfileCheckBox_CheckedChanged);
+            this.useLastProfile_checkBox.AutoSize = true;
+            this.useLastProfile_checkBox.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.useLastProfile_checkBox.Location = new System.Drawing.Point(11, 157);
+            this.useLastProfile_checkBox.Name = "useLastProfile_checkBox";
+            this.useLastProfile_checkBox.Size = new System.Drawing.Size(103, 19);
+            this.useLastProfile_checkBox.TabIndex = 2;
+            this.useLastProfile_checkBox.Text = "Use Last Profile";
+            this.useLastProfile_checkBox.UseVisualStyleBackColor = true;
+            this.useLastProfile_checkBox.CheckedChanged += new System.EventHandler(this.useLastProfile_checkBox_CheckedChanged);
             // 
-            // changePathButton
+            // startMinimised_checkBox
             // 
-            this.changePathButton.Location = new System.Drawing.Point(254, 121);
-            this.changePathButton.Name = "changePathButton";
-            this.changePathButton.Size = new System.Drawing.Size(114, 23);
-            this.changePathButton.TabIndex = 5;
-            this.changePathButton.Text = "Change Path";
-            this.changePathButton.UseVisualStyleBackColor = true;
-            this.changePathButton.Click += new System.EventHandler(this.ChangePathButton_Click);
+            this.startMinimised_checkBox.AutoSize = true;
+            this.startMinimised_checkBox.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.startMinimised_checkBox.Location = new System.Drawing.Point(369, 12);
+            this.startMinimised_checkBox.Name = "startMinimised_checkBox";
+            this.startMinimised_checkBox.Size = new System.Drawing.Size(106, 19);
+            this.startMinimised_checkBox.TabIndex = 3;
+            this.startMinimised_checkBox.Text = "Start Minimised";
+            this.startMinimised_checkBox.UseVisualStyleBackColor = true;
             // 
-            // profilesComboBox
+            // onStartProfile_comboBox
             // 
-            this.profilesComboBox.FormattingEnabled = true;
-            this.profilesComboBox.Location = new System.Drawing.Point(12, 235);
-            this.profilesComboBox.Name = "profilesComboBox";
-            this.profilesComboBox.Size = new System.Drawing.Size(215, 23);
-            this.profilesComboBox.TabIndex = 6;
+            this.onStartProfile_comboBox.FormattingEnabled = true;
+            this.onStartProfile_comboBox.ItemHeight = 15;
+            this.onStartProfile_comboBox.Location = new System.Drawing.Point(120, 206);
+            this.onStartProfile_comboBox.Name = "onStartProfile_comboBox";
+            this.onStartProfile_comboBox.Size = new System.Drawing.Size(253, 23);
+            this.onStartProfile_comboBox.TabIndex = 5;
             // 
-            // profilesLabel
+            // changeProfilesLocation_button
             // 
-            this.profilesLabel.AutoSize = true;
-            this.profilesLabel.Location = new System.Drawing.Point(12, 217);
-            this.profilesLabel.Name = "profilesLabel";
-            this.profilesLabel.Size = new System.Drawing.Size(145, 15);
-            this.profilesLabel.TabIndex = 7;
-            this.profilesLabel.Text = "On Start Select This Profile";
+            this.changeProfilesLocation_button.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.changeProfilesLocation_button.Location = new System.Drawing.Point(305, 83);
+            this.changeProfilesLocation_button.Name = "changeProfilesLocation_button";
+            this.changeProfilesLocation_button.Size = new System.Drawing.Size(170, 41);
+            this.changeProfilesLocation_button.TabIndex = 6;
+            this.changeProfilesLocation_button.Text = "Change Profiles Location";
+            this.changeProfilesLocation_button.UseVisualStyleBackColor = false;
+            this.changeProfilesLocation_button.Click += new System.EventHandler(this.changeProfilesLocation_button_Click);
             // 
-            // resetToDefaultButton
+            // fileMover_backgroundWorker
             // 
-            this.resetToDefaultButton.Location = new System.Drawing.Point(224, 305);
-            this.resetToDefaultButton.Name = "resetToDefaultButton";
-            this.resetToDefaultButton.Size = new System.Drawing.Size(114, 23);
-            this.resetToDefaultButton.TabIndex = 8;
-            this.resetToDefaultButton.Text = "Reset To Default";
-            this.resetToDefaultButton.UseVisualStyleBackColor = true;
-            // 
-            // startMinimisedCheckBox
-            // 
-            this.startMinimisedCheckBox.AutoSize = true;
-            this.startMinimisedCheckBox.Location = new System.Drawing.Point(254, 28);
-            this.startMinimisedCheckBox.Name = "startMinimisedCheckBox";
-            this.startMinimisedCheckBox.Size = new System.Drawing.Size(109, 19);
-            this.startMinimisedCheckBox.TabIndex = 9;
-            this.startMinimisedCheckBox.Text = "Start Minimised";
-            this.startMinimisedCheckBox.UseVisualStyleBackColor = true;
-            // 
-            // unloadImagesCheckBox
-            // 
-            this.unloadImagesCheckBox.AutoSize = true;
-            this.unloadImagesCheckBox.Location = new System.Drawing.Point(12, 66);
-            this.unloadImagesCheckBox.Name = "unloadImagesCheckBox";
-            this.unloadImagesCheckBox.Size = new System.Drawing.Size(198, 19);
-            this.unloadImagesCheckBox.TabIndex = 10;
-            this.unloadImagesCheckBox.Text = "Unload Images When Minimised";
-            this.unloadImagesCheckBox.UseVisualStyleBackColor = true;
+            this.fileMover_backgroundWorker.DoWork += new System.ComponentModel.DoWorkEventHandler(this.fileMover_backgroundWorker_DoWork);
             // 
             // OptionsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(380, 338);
-            this.Controls.Add(this.unloadImagesCheckBox);
-            this.Controls.Add(this.startMinimisedCheckBox);
-            this.Controls.Add(this.resetToDefaultButton);
-            this.Controls.Add(this.profilesLabel);
-            this.Controls.Add(this.profilesComboBox);
-            this.Controls.Add(this.changePathButton);
-            this.Controls.Add(this.onStartProfileCheckBox);
-            this.Controls.Add(this.saveButton);
-            this.Controls.Add(this.profilesLocationLabel);
-            this.Controls.Add(this.profilesLocationTextBox);
-            this.Controls.Add(this.startWithWindowsCheckBox);
+            this.BackColor = System.Drawing.SystemColors.Control;
+            this.ClientSize = new System.Drawing.Size(488, 247);
+            this.Controls.Add(startProfile_label);
+            this.Controls.Add(profilesFolder_label);
+            this.Controls.Add(this.changeProfilesLocation_button);
+            this.Controls.Add(this.onStartProfile_comboBox);
+            this.Controls.Add(this.startMinimised_checkBox);
+            this.Controls.Add(this.useLastProfile_checkBox);
+            this.Controls.Add(this.profilesLocation_textBox);
+            this.Controls.Add(this.autoStart_checkBox);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
             this.Name = "OptionsForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "OptionsForm";
+            this.Text = "Options";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OptionsForm_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -176,17 +158,13 @@
 
         #endregion
 
-        private System.Windows.Forms.CheckBox startWithWindowsCheckBox;
-        private System.Windows.Forms.FolderBrowserDialog profilesLocationFileBrowserDialog;
-        private System.Windows.Forms.TextBox profilesLocationTextBox;
-        private System.Windows.Forms.Label profilesLocationLabel;
-        private System.Windows.Forms.Button saveButton;
-        private System.Windows.Forms.CheckBox onStartProfileCheckBox;
-        private System.Windows.Forms.Button changePathButton;
-        private System.Windows.Forms.ComboBox profilesComboBox;
-        private System.Windows.Forms.Label profilesLabel;
-        private System.Windows.Forms.Button resetToDefaultButton;
-        private System.Windows.Forms.CheckBox startMinimisedCheckBox;
-        private System.Windows.Forms.CheckBox unloadImagesCheckBox;
+        private System.Windows.Forms.CheckBox autoStart_checkBox;
+        private System.Windows.Forms.TextBox profilesLocation_textBox;
+        private System.Windows.Forms.CheckBox useLastProfile_checkBox;
+        private System.Windows.Forms.CheckBox startMinimised_checkBox;
+        private System.Windows.Forms.ComboBox onStartProfile_comboBox;
+        private System.Windows.Forms.Button changeProfilesLocation_button;
+        private System.Windows.Forms.FolderBrowserDialog profilesLocation_folderBrowserDialog;
+        internal System.ComponentModel.BackgroundWorker fileMover_backgroundWorker;
     }
 }

@@ -1,718 +1,1423 @@
 ﻿using System;
-using System.Windows.Forms;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using IWshRuntimeLibrary;
+using System.Threading;
+using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 
 namespace KeyCounter
 {
-    /// <summary>
-    /// Class representing the main form of the app
-    /// </summary>
-    public partial class MainForm : Form
+    public partial class keyCounterMainFrame_frame : Form
     {
-        private readonly KeyboardHookClass _keyboard = new KeyboardHookClass();
+        private readonly Timer _clockTimer;
+        private DateTime? _startTime;
+        private readonly ImageList _listOfImages = new ImageList();
+        private Options _options = new Options();
+        private readonly SelectingRendered _renderer = new SelectingRendered();
+        private readonly List<Form> _infoForms = new List<Form>();
 
-        private readonly MouseHookClass _mouse = new MouseHookClass();
+        private readonly BackgroundWorker _getImageForOneKey_backgroundWorker = new BackgroundWorker();
+        private readonly BackgroundWorker _getImagesForListOfKeys_backgroundWorker = new BackgroundWorker();
 
-        private readonly GamepadClass _gamepad = new GamepadClass();
+        private readonly ConcurrentQueue<string> queueImagesYetHaveToCreate = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<List<string>> queueListsOfImagesYetHaveToCreate = new ConcurrentQueue<List<string>>();
 
-        public static Profile CurrentProfile;
 
-        private readonly ImageList _imageList = new ImageList();
+        public delegate void RestartWorkerEvent(object? sender, DictionaryEventArgs? e);
 
-        private readonly Options _options = new Options();
+        public event RestartWorkerEvent RestartImageLoader;
+        public event RestartWorkerEvent RestartSingleImageMaker;
+        public event RestartWorkerEvent RestartListOfImagesMaker;
 
-        private readonly string _execDirectoryPath = Path.GetDirectoryName(Application.ExecutablePath);
+        private long _remainingSingleImageRestarts = 0;
+        private bool _shouldRestartWorker = false;
+        private long _remainingListOfImageRestarts = 0;
 
-        private DictionaryWithEvents _currentSelectedDictionary;
 
-        internal static DateTime ProfileStartDate;
-        private bool _first = true;
-
-        private DateTime _profileStopDate;
-
-        /// <summary>
-        /// initialize components and proprieties of the class
-        /// </summary>
-        public MainForm()
-        {
-
-            InitializeComponent();
-
-            InitialSetUp();
-        }
-
-        /// <summary>
-        /// Continuously show a new <c>NewProfileForm</c> until at least one valid <c>Profile</c> exists in the <c> Options Profile List</c>
-        /// </summary>
-        private void ForceCreateProfile()
-        {
-            while (_options.ProfilesList.Count == 0)
-            {
-                //Create a new NewProfileForm with the current options and a DialogResult corresponding to the result of the 
-                // created from
-                NewProfileForm profileForm = new NewProfileForm(_options);
-
-                DialogResult formResult = profileForm.ShowDialog();
-
-                // if the result of the form is DialogResult.Yes try to create a new Profile
-                // with the given parameters
-                if (formResult == DialogResult.Yes)
-                {
-                    ProfileManager.CreateProfile(profileForm.ProfileName, profileForm.NeedsGamepad);
-
-                    // add the new profile to the profile list of the current options
-                    _options.ProfilesList.Add(profileForm.ProfileName);
-
-                    profileComboBox.DataSource = new BindingSource { DataSource = _options.ProfilesList };
-
-                    //try to open the newly created profile and call profileComboBox_SelectedIndexChanged
-                    //if it succeeds else if the corresponding file is not found delete the profile from 
-                    // the current options profile list 
-                    try
-                    {
-
-                        CurrentProfile = ProfileManager.SelectProfile(profileForm.ProfileName);
-
-                        profileComboBox.SelectedIndex = 0;
-
-                        profileComboBox_SelectedIndexChanged(null, null);
-
-
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        MessageBox.Show("The file corresponding to " + profileForm.ProfileName + " was not found, it will now be removed from memory.");
-
-                        _options.ProfilesList.Remove(profileForm.ProfileName);
-                    }
-
-                    profileForm.Dispose();
-                }
-            }
-        }
-
-        /// <summary>
-        /// UpdateTimeInvoker up parameters, read needed files and initialize proprieties
-        /// </summary>
-        /// <exception cref="ArgumentException"> thrown when no profile could be selected or created</exception>
-        private void InitialSetUp()
-        {
-
-            //read the options.cfg or create a new one if it does not exist
-            _options.ReadOrCreateOptionsFile();
-
-            //give to the profile manager the location of the Profiles folder on disk
-            ProfileManager.ProfilesFolder = _options.ProfilesLocation;
-
-            //initialize start date for measuring how much time a profile was used 
-            ProfileStartDate = DateTime.UtcNow;
-
-
-
-
-            // set up the handlers for the gamepad events related to the connection to the computer
-            _gamepad.OnGamepadFoundStatus += () => { MessageBox.Show("Gamepad Found"); };
-            _gamepad.OnGamepadDisconnectStatus += () => { MessageBox.Show("Gamepad disconnected"); };
-            _gamepad.OnNoGamepadFoundStatus += () => { MessageBox.Show("No gamepad connected found"); };
-
-            _imageList.ImageSize = new Size(100, 53);
-
-            keysListView.LargeImageList = _imageList;
-
-
-            KeyboardImages.Initialize(_imageList);
-            MouseImages.Initialize(_imageList);
-            GamepadImages.Initialize(_imageList);
-
-
-            
-
-            // if the number of profiles is 0 force the creation of one
-            ForceCreateProfile();
-
-
-
-            
-
-            //if the CurrentProfile is not initialized try to initialize it according to the current settings
-            if (CurrentProfile.Name == null)
-            {
-                profileComboBox.DataSource = new BindingSource { DataSource = _options.ProfilesList };
-
-                //if the option UseLastProfile is true try setting the CurrentProfile to the last used
-                // profile before the app closing 
-                if (_options.LastSelectedProfile != "" && _options.UseLastProfile)
-                {
-                    //try opening the LastSelectedProfile profile and call profileComboBox_SelectedIndexChanged
-                    //if it succeeds else if it does not succeed open the first profile in the 
-                    // current options profile list, if the current options profile list is empty force
-                    // the creation of a new profile
-                    try
-                    {
-                        CurrentProfile = ProfileManager.SelectProfile(_options.LastSelectedProfile);
-
-                        profileComboBox.SelectedItem = CurrentProfile.Name;
-
-                        profileComboBox_SelectedIndexChanged(null, null);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        MessageBox.Show("The file corresponding to " + _options.LastSelectedProfile + " was not found, it will now be removed from memory.");
-
-                        _options.ProfilesList.Remove(_options.LastSelectedProfile);
-
-                        if (_options.ProfilesList.Count == 0)
-                        {
-                            ForceCreateProfile();
-                        }
-                        else
-                        {
-                            profileComboBox.SelectedIndex = 0;
-
-                            CurrentProfile = ProfileManager.SelectProfile(profileComboBox.Text);
-
-                            profileComboBox_SelectedIndexChanged(null, null);
-                        }
-                    }
-                    
-                }
-                // if the option UseLastProfile is false and there is a OnStartProfile in the current options
-                //try to open it 
-                else if (_options.UseLastProfile == false && _options.OnStartProfile != "")
-                {
-                    //try setting the CurrentProfile to the OnStartProfile and call profileComboBox_SelectedIndexChanged
-                    //if it succeeds else if this fails try to set the CurrentProfile 
-                    //to the first element in the options profiles list, if the list is empty force the creation of a
-                    // new valid profile
-                    try
-                    {
-                        CurrentProfile = ProfileManager.SelectProfile(_options.OnStartProfile);
-                        
-                        profileComboBox.Text = CurrentProfile.Name;
-
-                        profileComboBox_SelectedIndexChanged(null, null);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        MessageBox.Show("3 The file corresponding to " + _options.OnStartProfile + " was not found, it will now be removed from memory.");
-
-                        _options.ProfilesList.Remove(_options.OnStartProfile);
-                        if (_options.ProfilesList.Count == 0)
-                        {
-                            ForceCreateProfile();
-                        }
-                        else
-                        {
-                            profileComboBox.SelectedIndex = 0;
-
-                            CurrentProfile = ProfileManager.SelectProfile(profileComboBox.Text);
-
-                            profileComboBox_SelectedIndexChanged(null, null);
-                        }
-                    }
-
-                    
-                }
-                // throw an exception if no profile could be selected or created
-                else
-                {
-                    throw new ArgumentException("Could not select a profile");
-                }
-
-            }
-
-
-            // set up the keyboard and mouse hooks
-            _keyboard.Initialize();
-            _mouse.Initialize();
-
-            // set the tool strip for the task-bar icon with the current list of profiles
-            ToolStripItem[] toolStripMenuItems = new ToolStripItem[_options.ProfilesList.Count];
-
-            for (int i = 0; i < _options.ProfilesList.Count; i++)
-            {
-                toolStripMenuItems[i] = new ToolStripMenuItem(_options.ProfilesList[i], null, null, _options.ProfilesList[i]);
-            }
-
-            profilesContextMenu.Items.AddRange(toolStripMenuItems);
-
-            taskBarIcon.ContextMenuStrip = profilesContextMenu;
-        }
-
-        /// <summary>
-        /// When the form is resized verify if it was minimized, if it was hide the form from view
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public void Form1_Resize(object sender, EventArgs e)
+        public keyCounterMainFrame_frame()
         {
             
-            if (this.WindowState == FormWindowState.Minimized)
+            try
             {
-                CurrentProfile.KeyboardKeys.DisableEvents();
-                CurrentProfile.MouseKeys.DisableEvents();
-                CurrentProfile.GamepadKeys.DisableEvents();
-                Hide();
-            }
+                
+                //Console.WriteLine("initializing stuff");
+            
+                InitializeComponent();
 
-        }
+                // prevent an event that would fire when the data source changes while initializing other stuff, will set again the handler in the load function
+                profile_comboBox.SelectedIndexChanged -= profile_comboBox_SelectedIndexChanged;
 
-        /// <summary>
-        /// UpdateTimeInvoker the form to visible when the icon in the task-bar is Double Clicked 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        public void notifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            if (Visible == false)
-            {
-                Show();
-            }
-            WindowState = FormWindowState.Normal;
+            
+                _clockTimer = new Timer {Interval = 500};
+                _clockTimer.Tick += UpdateTimeOnInterface;
+            
+                _options.ReadOrCreateOptions();
+                _startTime = DateTime.UtcNow;
 
-        }
-
-        /// <summary>
-        /// Save the current profile, options, remove keyboard and mouse hooks, stop the gamepad operations and dispose of the 
-        /// task-bar icon
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
-            //and add it to it's count so far 
-            _profileStopDate = DateTime.UtcNow;
-            CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
-
-            ProfileManager.SaveProfile(CurrentProfile);
-
-            _options.SaveOptionsToFile();
-
-            _keyboard.DeleteKeyboardHook();
-            _mouse.DeleteMouseHook();
-            _gamepad.Stop();
-
-            taskBarIcon.Dispose();
-        }
+            
+                notifyIcon_main_contextMenuStrip.Items.Add("Maximize",null,taskbar_notifyIcon_DoubleClick);
+                notifyIcon_main_contextMenuStrip.Items.Add("Quit",null,CloseRequest_handler);
 
 
-        /// <summary>
-        /// Save the <c>CurrentProfile</c>, select the new one according to the selected one in the <c>profileComboBox</c>  
-        /// , set up the handlers for the newly selected profile and start/ stop gamepad handling according to the profiles settings
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void  profileComboBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
+                taskbar_notifyIcon.ContextMenuStrip = notifyIcon_main_contextMenuStrip;
 
-            if (profileComboBox.SelectedItem.ToString() != CurrentProfile.Name || collectionsComboBox.DataSource == null)
-            {
+                UpdateContextMenuProfiles(_options.ProfileList);
+                notifyIcon_toolStripMenuItem.DropDownItemClicked += NotifyIcon_toolStripMenuItemOnDropDownItemClicked;
 
-                if (taskBarIcon.ContextMenuStrip != null)
+                // create the object that colors the selected profile and color the one selected now
+                notifyIcon_main_contextMenuStrip.Renderer = _renderer;
+                
+
+                // initialize keyboard and mouse hooks
+                KeyboardHookClass.Initialize();
+                MouseHookClass.Initialize();
+
+
+                _listOfImages.ImageSize = new Size(130, 69);
+                imagesList_listView.LargeImageList = _listOfImages;
+
+
+                
+                // set up background workers event handlers and make them accept cancellation 
+                _getImageForOneKey_backgroundWorker.WorkerSupportsCancellation = true;
+                _getImageForOneKey_backgroundWorker.DoWork += GetImageForNewKeyBackgroundWorker;
+                _getImageForOneKey_backgroundWorker.RunWorkerCompleted += UpdateListViewForNewImage;
+                
+
+                _getImagesForListOfKeys_backgroundWorker.WorkerSupportsCancellation = true;
+                _getImagesForListOfKeys_backgroundWorker.DoWork += GetImagesForListOfNewKeysBackgroundWorker;
+                _getImagesForListOfKeys_backgroundWorker.RunWorkerCompleted += UpdateListViewForListOfNewImages;
+                
+
+
+                // sometimes a worker might have to restart immediately after completing its work or might have multiple 
+                // separate jobs to do in sequence. This takes care to restart them safely since cancellation in itself 
+                // might take a while in some cases
+                RestartImageLoader += (sender, args) =>
                 {
-                    foreach (ToolStripMenuItem item in taskBarIcon.ContextMenuStrip.Items)
-                    {
-                        item.Checked = false;
-                    }
-
-                    if (taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString()) >=0 )
-                    {
-                        ((ToolStripMenuItem)taskBarIcon.ContextMenuStrip.Items[taskBarIcon.ContextMenuStrip.Items.IndexOfKey(profileComboBox.SelectedItem.ToString())]).Checked = true;
-
-                    }
-
-                }
-
-
-                //register the current date and calculate how may hours( with two fractional digits) has the profile been used for
-                //and add it to it's count so far and save the profile
-                _profileStopDate = DateTime.UtcNow;
-
-                CurrentProfile.TimeUsed += (float)Math.Round((_profileStopDate - ProfileStartDate).TotalHours, 2);
-
-                ProfileManager.SaveProfile(CurrentProfile);
-
-                //try setting the CurrentProfile according to the value of the profileComboBox 
-                // if this fails try to set the CurrentProfile 
-                // to the first element in the options profiles list, if the list is empty force the creation of a
-                // new valid profile
-                try
-                {
-                    CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
-                }
-                catch (FileNotFoundException)
-                {
-                    MessageBox.Show("4 The file corresponding to " + profileComboBox.SelectedItem +
-                                    " was not found, it will now be removed from memory.");
-
-                    _options.ProfilesList.Remove(profileComboBox.Text);
-                    if (_options.ProfilesList.Count == 0)
-                    {
-                        ForceCreateProfile();
-                    }
-                    else
-                    {
-                        profileComboBox.SelectedIndex = 0;
-
-                        CurrentProfile = ProfileManager.SelectProfile(profileComboBox.SelectedItem.ToString());
-                    }
-                }
-
-                // set the start date of this profile to the closing one of the last one
-                ProfileStartDate = _profileStopDate;
-
-
-                //give the new values for the CurrentProfile, list view and image list to the class
-                // handling the dictionary events setup 
-                DictionaryWithEventsHandlers.SetInternals(CurrentProfile, _imageList, keysListView,
-                    timeUsedTextBox);
-
-                //set up the handlers for the dictionaries of the newly selected profile
-                DictionaryWithEventsHandlers.SetUpHandlersForCurrentProfile();
-
-                // if needed start the gamepad connection and handling processes
-                if (!CurrentProfile.NeedsGamepad)
-                {
-                    _gamepad.Stop();
-                }
-                else
-                {
-                    _gamepad.Start();
-                }
-
-                collectionsComboBox.DataSource = new BindingSource
-                {
-                    DataSource = CurrentProfile.TypesOfInputList
+                    _shouldRestartWorker = false;
+                    imageLoader_backgroundWorker.RunWorkerAsync();
                 };
 
-                _options.LastSelectedProfile = CurrentProfile.Name;
+                RestartSingleImageMaker += (sender, args) =>
+                {
+                    queueImagesYetHaveToCreate.TryDequeue(out var key);
+                    if (key != null)
+                    {
+                        Interlocked.Decrement(ref _remainingSingleImageRestarts);
+                        _getImageForOneKey_backgroundWorker.RunWorkerAsync(argument: key);
+                    }
+                };
 
-                profileComboBox.SelectedItem = CurrentProfile.Name;
-
-                collectionsComboBox_SelectedIndexChanged(null,null);
-
+                RestartListOfImagesMaker += (sender, args) =>
+                {
+                    queueImagesYetHaveToCreate.TryDequeue(out var keys);
+                    if (keys != null)
+                    {
+                        Interlocked.Decrement(ref _remainingListOfImageRestarts);
+                        _getImagesForListOfKeys_backgroundWorker.RunWorkerAsync(argument: keys);
+                    }
+                };
             }
-
-            this.ActiveControl = null;
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to initialize the main form");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to initialize the main form");
+                    
+                }
+                throw exception;
+            }
         }
 
 
         /// <summary>
-        /// Clear the list view in the main form, enable events for the dictionary that is selected in the 
-        /// <c>collectionsComboBox</c> adn load the images and count for the current dictionary in the list view
+        /// Update the label in the form with the new time spent in the current profile
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        /// <exception cref="ArgumentException"> Thrown when the value of <c>collectionsComboBox.SelectedItem</c> 
-        /// is not keyboard/ mouse/ gamepad/ total </exception>
-        private void collectionsComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void UpdateTimeOnInterface(object? sender, EventArgs e)
         {
-
-            this.ActiveControl = null;
-
-            string name = collectionsComboBox.SelectedItem.ToString();
-
-            // disable events for all dictionaries
-            CurrentProfile.KeyboardKeys.DisableEvents();
-            CurrentProfile.MouseKeys.DisableEvents();
-            CurrentProfile.GamepadKeys.DisableEvents();
-
-            //check which dictionary needs to have its events enabled, clear the list view and load the images and counts
-            // for the corresponding dictionary
-            switch (name)
+            try
             {
-                case "Keyboard":
+                var profileTime = ProfileManager.GetTimeSpent();
+                if (!profileTime.HasValue)
+                {
+                    return;
+                }
+
+                var span = (DateTime.UtcNow - _startTime) + new TimeSpan(profileTime.Value);
+                if (span.HasValue)
+                {
+                    clock_label.Text = $@"Time spent: {(int) span.Value.TotalHours}:{span.Value.Minutes}:{span.Value.Seconds}";
+                }
+                else
+                {
+                    throw new ArgumentNullException("The difference in time is null");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to update the time on the interface");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to update the time on the interface");
+                    
+                }
+                throw exception;
+            }
+            
+        }
+
+
+        /// <summary>
+        /// Remove icons from the forms list view 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RemoveListOfKeysFromListView(object sender, DictionaryEventArgs e)
+        {
+            try
+            {
+                // this prevents the list view to update its interface until end update is called 
+                imagesList_listView.BeginUpdate();
+
+                if (e.Keys != null)
+                {
+                    foreach (var key in e.Keys)
                     {
-                        _currentSelectedDictionary = CurrentProfile.KeyboardKeys;
-                        if (this.Visible || _first)
+                        var keyToUse = ProfileManager.CurrentDevice.RenamesContainsKey(key)
+                            ? ProfileManager.CurrentDevice.KeysRename[key]
+                            : key;
+                        if (imagesList_listView.Items.ContainsKey(keyToUse))
                         {
-                            _currentSelectedDictionary.EnableEvents();
-                            _currentSelectedDictionary.InitialLoad();
+                            imagesList_listView.Items.RemoveByKey(keyToUse);
+                            _listOfImages.Images[keyToUse]?.Dispose();
+                            _listOfImages.Images.RemoveByKey(keyToUse);
                         }
+                    }
+                }
+
+                imagesList_listView.EndUpdate();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to remove a list of images from the list view");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to remove a list of images from the list view");
+                    
+                }
+                throw exception;
+            }
+        }
+
+
+        /// <summary>
+        /// Update the counter of the key for an image already present in the list view
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OldKeyPress_Handler(object sender, DictionaryEventArgs e)
+        {
+            try
+            {
+                if (!imageLoader_backgroundWorker.IsBusy)
+                {
+                    imagesList_listView.BeginUpdate();
+                    var keyToUse = e.Key != null && ProfileManager.CurrentDevice.RenamesContainsKey(e.Key) ? ProfileManager.CurrentDevice.KeysRename[e.Key] : e.Key;
+
+                    if (imagesList_listView.Items.ContainsKey(keyToUse))
+                    {
+                        if (e.Key != null)
+                        {
+                            imagesList_listView.Items[keyToUse].Text = ProfileManager.CurrentDevice[e.Key].ToString();
+                        }
+                    }
+                    imagesList_listView.EndUpdate();
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to update the interface count for an old key");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to update the interface count for an old key");
+                    
+                }
+                throw exception;
+            }
+        }
+
+
+        /// <summary>
+        /// Run worker to get image for the new key
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void NewKeyPress_Handler(object sender, DictionaryEventArgs e)
+        {
+            
+            try
+            {
+                // if the worker is free then do the job else add it to a queue
+                if (!_getImageForOneKey_backgroundWorker.IsBusy)
+                {
+                    _getImageForOneKey_backgroundWorker.RunWorkerAsync(argument : e.Key);    
+                }
+                else
+                {
+                    if (e.Key == null)
+                    {
+                        return;
+                    }
+                    queueImagesYetHaveToCreate.Enqueue(e.Key);
+                    Interlocked.Increment(ref _remainingSingleImageRestarts);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to run the worker for making a new image");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to run the worker for making a new image");
+                    
+                }
+                throw exception;
+            }
+        }
+
+
+        /// <summary>
+        /// Do work for background worker that makes 1 image
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void GetImageForNewKeyBackgroundWorker(object sender, DoWorkEventArgs e)
+        {
+            try
+            {
+                if (!ProfileManager.CurrentDevice.AreImagesLoaded())
+                {
+                    return;
+                }
+
+                var keyToUse = ProfileManager.CurrentDevice.RenamesContainsKey((string)e.Argument) ? ProfileManager.CurrentDevice.KeysRename[(string)e.Argument] : (string)e.Argument;
+                ProfileManager.CurrentDevice.GetOrCreateImageForKey(keyToUse);
+                e.Result = e.Argument;
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to add a new image for a key");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to add a new image for a key");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Add to the list view the new image and the count for the respective key
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UpdateListViewForNewImage(object sender, RunWorkerCompletedEventArgs e)
+        {
+            try
+            {
+                if (ProfileManager.CurrentDevice.AreImagesLoaded())
+                {
+                
+                    imagesList_listView.BeginUpdate();
+                    string key = e.Result as string ?? throw new NullReferenceException("Key for image cannot be null for a new image");
+                    //string keyToUse;
+                    
+                    // get the proper name to write on the image, this name is purely esthetic,
+                    // the value in the count dictionary will always remain the same for a key
+                    var keyToUse = ProfileManager.CurrentDevice.RenamesContainsKey(key) ? ProfileManager.CurrentDevice.KeysRename[key] : key;
+                   
+                
+                    _listOfImages.Images.Add(keyToUse, ProfileManager.CurrentDevice.GetOrCreateImageForKey(keyToUse) ?? throw new NullReferenceException("Images are null whn updating list"));
+                    imagesList_listView.Items.Add(keyToUse,ProfileManager.CurrentDevice[key].ToString(), keyToUse);
+                    imagesList_listView.EndUpdate();
+                }
+
+                // see if there are more jobs left to do 
+                if (Interlocked.Read(ref _remainingSingleImageRestarts) > 0)
+                {
+                    RestartSingleImageMaker?.Invoke(null,null);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to update the list view with a new image");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to update the list view with a new image");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Do work for background worker that makes images for a list of keys
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void GetImagesForListOfNewKeysBackgroundWorker(object sender, DoWorkEventArgs e)
+        {
+            try
+            {
+                // no point in requesting an image to get returned if the images are not in memory
+                if (!ProfileManager.CurrentDevice.AreImagesLoaded()) return;
+                foreach (var key in (List<string>) e.Argument)
+                {
+                    ProfileManager.CurrentDevice.GetOrCreateImageForKey(key);
+                }  
+                e.Result = e.Argument;
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to get images for a list of keys");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to get images for a list of keys");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Add to the list view images and values for a list of keys
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UpdateListViewForListOfNewImages(object sender, RunWorkerCompletedEventArgs e)
+        {
+            // comments pretty much the same as in UpdateListViewForNewImage
+            try
+            {
+                if (ProfileManager.CurrentDevice.AreImagesLoaded())
+                {
+                    imagesList_listView.BeginUpdate();
+                    foreach (var key in (List<string>) e.Result )
+                    {
+                        var keyToUse = ProfileManager.CurrentDevice.RenamesContainsKey(key) ? ProfileManager.CurrentDevice.KeysRename[key] : key;
                         
-                        break;
-                    }
-                case "Mouse":
-                    {
-                        _currentSelectedDictionary = CurrentProfile.MouseKeys;
-                        if (this.Visible || _first)
+                        if (!_listOfImages.Images.ContainsKey(keyToUse))
                         {
-                            _currentSelectedDictionary.EnableEvents();
-                            _currentSelectedDictionary.InitialLoad();
-                        }
-                        break;
-                    }
-                case "Gamepad":
-                    {
 
-                        _currentSelectedDictionary = CurrentProfile.GamepadKeys;
-                        if (this.Visible || _first)
+                            _listOfImages.Images.Add(keyToUse, ProfileManager.CurrentDevice.GetOrCreateImageForKey(keyToUse));
+                            imagesList_listView.Items.Add(keyToUse,ProfileManager.CurrentDevice[key].ToString(), keyToUse);
+                        }
+                        else
                         {
-                            _currentSelectedDictionary.EnableEvents();
-                            _currentSelectedDictionary.InitialLoad();
+                            imagesList_listView.Items[keyToUse].Text = ProfileManager.CurrentDevice[key].ToString();
                         }
-                        break;
-                    }
-                case "Total":
-                    {
-                        keysListView.Clear();
+                    }  
+                    imagesList_listView.EndUpdate();
+                }
 
-                        if (this.Visible)
-                        {
-                            foreach (KeyValuePair<string, CustomPair> item in CurrentProfile.TotalKeys)
-                            {
-                                keysListView.Items.Add(item.Key, item.Value.Number.ToString(), item.Key);
-                            }
-
-                            CurrentProfile.KeyboardKeys.EnableEvents();
-                            CurrentProfile.MouseKeys.EnableEvents();
-                            CurrentProfile.GamepadKeys.EnableEvents();
-
-                        }
-
-                        break;
-                    }
-                default:
-                    {
-                        throw new ArgumentException("Unknown collection");
-
-                    }
+                if (Interlocked.Read(ref _remainingListOfImageRestarts) > 0)
+                {
+                    RestartListOfImagesMaker?.Invoke(null,null);
+                }
             }
-
-
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to update list view with a list of new images");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to update list view with a list of new images");
+                }
+                throw exception;
+            }
         }
 
         /// <summary>
-        /// Creates a new OptionsForm and based on its result change the current options
+        /// Run worker to get images for a list of keys
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void optionsButton_Click(object sender, EventArgs e)
+        private void ListOfKeysAddedHandler(object sender, DictionaryEventArgs e)
         {
-            OptionsForm optionsForm = new OptionsForm(_options);
-            DialogResult formResult = optionsForm.ShowDialog();
-            //if the user selected "reset to default" reset options to their default value
-            // but don't delete the Profiles
-            if (formResult == DialogResult.No)
+            try
             {
-                if (_options.ProfilesLocation != _execDirectoryPath + "\\" + "Profiles")
+                if (!_getImagesForListOfKeys_backgroundWorker.IsBusy)
                 {
-                    ProfileManager.MoveProfiles(_execDirectoryPath);
-                    ProfileManager.ProfilesFolder = _execDirectoryPath + "\\" + "Profiles";
+                    _getImagesForListOfKeys_backgroundWorker.RunWorkerAsync(argument : e.Keys);
+                }
+                else
+                {
+                    // add new job in queue if the worker is busy
+                    if (e.Keys == null)
+                    {
+                        return;
+                    }
+                    queueListsOfImagesYetHaveToCreate.Enqueue(e.Keys);
+                    Interlocked.Increment(ref _remainingListOfImageRestarts);
 
                 }
-                _options.ResetToDefaultOptions(false);
-
+                
             }
-            // if the user selected to save the settings
-            else if(formResult == DialogResult.Yes)
+            catch (Exception ex)
             {
-                // if the user wanted to change the location of the Profiles folder move the folder to the new location
-                if (optionsForm.ProfilesLocation != _options.ProfilesLocation)
+                if (ex is ChainingException exception)
                 {
-                    ProfileManager.MoveProfiles(optionsForm.ProfilesLocation);
-                    ProfileManager.ProfilesFolder = optionsForm.ProfilesLocation + "\\" + "Profiles";
-                    _options.ProfilesLocation = optionsForm.ProfilesLocation + "\\" + "Profiles";
+                    exception.AddErrorToChain("While trying to run the worker for making images for a list of key");
                 }
-                // retrieve the other option set by the user
-                _options.OnStartProfile = optionsForm.OnStartProfile;
-                _options.UseLastProfile = optionsForm.UseLastProfile;
-                _options.StartMinimized = optionsForm.StartMinimized;
-                _options.UnloadImages = optionsForm.UnloadImages;
-
-                // if auto-start is set to true put a shortcut of the app in the Startup folder of the current computer
-                // else remove the shortcut from the Startup folder
-                if (_options.AutoStart != optionsForm.StartWithWindows)
+                else
                 {
-                    _options.AutoStart = optionsForm.StartWithWindows;
-                    if (_options.AutoStart)
-                    { 
-                        Console.WriteLine(Application.ExecutablePath.Replace(".dll", ".exe"));
-                        string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-                        WshShellClass shell = new WshShellClass();
-                        IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(startupFolder + "\\" + "KeyCounter.lnk");
-                        shortcut.TargetPath = Application.ExecutablePath.Replace(".dll", ".exe");
-                        shortcut.Description = "KeyCounter shortcut";
-                        shortcut.Save();
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to run the worker for making images for a list of key");
+                    
+                }
+                throw exception;
+            }
+        }
 
+        /// <summary>
+        /// Add to the list view all the images and values inside of the current devices keys count dictionary. Used when
+        /// a new device is selected.
+        /// </summary>
+        private void InitialListViewUpdate()
+        {
+            try
+            {
+                imagesList_listView.BeginUpdate();
+
+                imagesList_listView.Items.Clear();
+
+                for (int i = 0; i < _listOfImages.Images.Count; i++)
+                {
+                    _listOfImages.Images[i].Dispose();
+                    _listOfImages.Images.RemoveAt(i);
+                }
+            
+                _listOfImages.Images.Clear();
+                foreach (var button in ProfileManager.CurrentDevice)
+                {
+                    //if the background worker is busy then the form was minimized or a new device was selected so there is no point in adding the images since they
+                    // will be removed later
+                    if (imageLoader_backgroundWorker.IsBusy || imageLoader_backgroundWorker.CancellationPending)
+                    {
+                        imagesList_listView.Items.Clear();
+                        // might be disposing a bit to often images, but if I'm not making sure they are eliminated from memory leaks happen, so ya know, better safe than sorry
+                        for (int i = 0; i < _listOfImages.Images.Count; i++)
+                        {
+                            _listOfImages.Images[i].Dispose();
+                            _listOfImages.Images.RemoveAt(i);
+                        }
+                        _listOfImages.Images.Clear();
+                        imagesList_listView.EndUpdate();
+                        return;
+                    }
+                
+                    var keyToUse = ProfileManager.CurrentDevice.RenamesContainsKey(button.Key) ? ProfileManager.CurrentDevice.KeysRename[button.Key] : button.Key;
+                    
+                    if (ProfileManager.CurrentDevice.GetOrCreateImageForKey(keyToUse) != null)
+                    {
+                        _listOfImages.Images.Add(keyToUse,
+                            ProfileManager.CurrentDevice.GetOrCreateImageForKey(keyToUse) ?? throw new NullReferenceException("Images are not loaded while initializing list after load worker completed"));
+                        imagesList_listView.Items.Add(keyToUse, button.Value.ToString(), keyToUse);
+                    }
+                }
+
+                imagesList_listView.EndUpdate();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to update the list view for all keys");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to update the list view for all keys");
+                    
+                }
+                throw exception;
+            }
+            
+        }
+
+        private void NotifyIcon_toolStripMenuItemOnDropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+             profile_comboBox.SelectedItem = e.ClickedItem.ToString();
+        }
+
+        /// <summary>
+        /// used to highlight the menu item corresponding to the currently selected profile
+        /// </summary>
+        private class SelectingRendered : ToolStripProfessionalRenderer
+        {
+            internal string? SelectedProfile;
+
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            {
+
+                if (e.ToolStrip.Name == "" && SelectedProfile == e.Item.ToString())
+                {
+                    // colors don't look overly harmonic, but I'm no designer so watevs
+                    if (e.Item.Selected)
+                    {
+                        using (SolidBrush brush = new SolidBrush(Color.LightPink))
+                        {
+                            e.Graphics.FillRectangle(brush, 0,0,e.Item.Size.Width,e.Item.Size.Height);
+                        }
                     }
                     else
                     {
-                        string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-
-                        if (System.IO.File.Exists(startupFolder + "\\" + "KeyCounter.lnk"))
+                        using (SolidBrush brush = new SolidBrush(Color.Plum))
                         {
-                            System.IO.File.Delete(startupFolder + "\\" + "KeyCounter.lnk");
+                            e.Graphics.FillRectangle(brush, 0,0,e.Item.Size.Width,e.Item.Size.Height);
+                        }
+                    }
+                }
+                else
+                {
+
+                    if (e.Item.Selected)
+                    {
+                        using (SolidBrush brush = new SolidBrush(SystemColors.MenuHighlight))
+                        {
+                            e.Graphics.FillRectangle(brush, 0,0,e.Item.Size.Width,e.Item.Size.Height);
+                        }
+                    }
+                    else
+                    {
+                        using (SolidBrush brush = new SolidBrush(SystemColors.Menu))
+                        {
+                            e.Graphics.FillRectangle(brush, 0,0,e.Item.Size.Width,e.Item.Size.Height);
                         }
                     }
                 }
                 
-
-            }
-        }
-
-        
-        /// <summary>
-        /// Show a message box with a warning, if the user selects to reset the profile clear all dictionaries and reset timer
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void clearProfileButton_Click(object sender, EventArgs e)
-        {
-            DialogResult result = MessageBox.Show("This will reset all buttons counts for the current profile","Clear counts", MessageBoxButtons.OKCancel);
-            if (result == DialogResult.OK)
-            {
-                CurrentProfile.GamepadKeys.Clear();
-                CurrentProfile.KeyboardKeys.Clear();
-                CurrentProfile.MouseKeys.Clear();
-                CurrentProfile.TotalKeys.Clear();
-                CurrentProfile.TimeUsed = 0.00f;
-            }
-        }
+            } 
+        } 
 
 
         /// <summary>
-        /// Create a <c>newProfileForm</c>, if the user clicks the create button create a new profile with the given parameters
-        /// , change <c>profileComboBox.SelectedItem</c>, and call profileComboBox_SelectedIndexChanged so the created profile 
-        /// is set as the CurrentProfile
+        /// Load all images for the current device in memory
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void newProfileButton_Click(object sender, EventArgs e)
+        private void backgroundLoader_DoWork(object sender, DoWorkEventArgs e)
         {
-            NewProfileForm newProfileForm = new NewProfileForm(_options);
-            DialogResult formResult = newProfileForm.ShowDialog();
-            if (formResult == DialogResult.Yes)
+            
+            //Console.WriteLine("Background worker loading images");
+            
+            try
             {
-                ProfileManager.CreateProfile(newProfileForm.ProfileName, newProfileForm.NeedsGamepad);
-                _options.ProfilesList.Add(newProfileForm.ProfileName);
-                taskBarIcon.ContextMenuStrip.Items.Add(newProfileForm.ProfileName);
-                profileComboBox.SelectedItem = newProfileForm.ProfileName;
-                profileComboBox_SelectedIndexChanged(null, null);
+                if (!ProfileManager.CurrentDevice.AreImagesLoaded())
+                {
+                    if (ProfileManager.CurrentDevice.LoadImages((BackgroundWorker) sender) == false)
+                    {
+                        
+                        ProfileManager.CurrentDevice.UnloadImages();
+                        //Console.WriteLine(" Background worker cancelled");
+                        e.Cancel = true;
+                        return;
+
+                    }
+                }
+
+                foreach (var button in ProfileManager.CurrentDevice)
+                {
+                    if (((BackgroundWorker) sender).CancellationPending)
+                    {
+                        ProfileManager.CurrentDevice.UnloadImages();
+                        //Console.WriteLine(" Background worker cancelled");
+                        e.Cancel = true;
+                        return;
+                    }
+                    ProfileManager.CurrentDevice.GetOrCreateImageForKey(button.Key);
+                }
+
+
+                //Console.WriteLine("Background worker done loading images");
             }
-            newProfileForm.Dispose();
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to load images with background loader");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to load images with background loader");
+                    
+                }
+                throw exception;
+            }
+
+        }
+
+
+        /// <summary>
+        /// Update the available devices of the current profile
+        /// </summary>
+        /// <param name="newItems"></param>
+        private void UpdateContextMenuProfiles(BindingList<string> newItems)
+        {
+            notifyIcon_toolStripMenuItem.DropDownItems.Clear();
+            foreach (var item in newItems)
+            {
+                notifyIcon_toolStripMenuItem.DropDownItems.Add(item, null);
+            }
+            
+        }
+
+
+        /// <summary>
+        /// Decide what to do with the list view depending on the completion status of the background image loader 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void backgroundLoader_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            try
+            {
+                
+                if (e.Cancelled)
+                {
+                    imagesList_listView.BeginUpdate();
+
+                    imagesList_listView.Items.Clear();
+                    for (int i = 0; i < _listOfImages.Images.Count; i++)
+                    {
+                        _listOfImages.Images[i].Dispose();
+                        _listOfImages.Images.RemoveAt(i);
+                    }
+                    _listOfImages.Images.Clear();
+                    
+
+                    imagesList_listView.EndUpdate();
+                }
+                else
+                {
+                    InitialListViewUpdate();
+                }
+
+                if (_shouldRestartWorker)
+                {
+                    RestartImageLoader?.Invoke(null,null);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to handle the background worker finishing its work");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to handle the background worker finishing its work");
+                }
+                throw exception;
+            }
         }
 
         /// <summary>
-        /// Try to delete the CurrentProfile
+        /// Dispose the options form if it is no longer needed
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void deleteProfileButton_Click(object sender, EventArgs e)
+        private void DisposeOptionsForm(object sender,EventArgs e)
         {
-            // if the CurrentProfile is the only existing one show a MessageBox telling the user that the last profile cannot 
-            // be deleted 
-            if (_options.ProfilesList.Count == 1)
+            var form = sender as OptionsForm;
+            form?.Dispose();
+        }
+
+        /// <summary>
+        /// Make a new options form and if the user wanted to move the profile files start a mover background worker
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void options_button_Click(object sender, EventArgs e)
+        {
+            //Console.WriteLine("Options button clicked");
+            try
             {
-                MessageBox.Show("You cannot delete the last profile");
-            }
-            // else show a MessageBox asking the user if it is sure that it wants to delete the profile
-            else
-            {
-                DialogResult result = MessageBox.Show("Are you sure you want to delete the current profile?", "Delete Profile", MessageBoxButtons.YesNo);
-                // if the user selects Delete then the CurrentProfile is deleted and the first profile in the 
-                // profiles list becomes the CurrentProfile
+                var optionsForm = new OptionsForm(ref _options);
+
+                optionsForm.fileMover_backgroundWorker.RunWorkerCompleted += DisposeOptionsForm;
+            
+                DialogResult result = optionsForm.ShowDialog();
                 if (result == DialogResult.Yes)
                 {
-                    taskBarIcon.ContextMenuStrip.Items.RemoveByKey(CurrentProfile.Name);
-                    ProfileManager.DeleteProfile(CurrentProfile, _options);
-                    profileComboBox.SelectedIndex = 0;
-                    profileComboBox_SelectedIndexChanged(null, null);
+                    optionsForm.fileMover_backgroundWorker.RunWorkerAsync(new Tuple<string,string> (optionsForm.StartProfilesLocations,optionsForm.DestinationProfilesLocations));
                 }
+                else
+                {
+                    optionsForm.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to change options");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to change options");
+                    
+                }
+                throw exception;
             }
             
         }
 
         /// <summary>
-        /// The first time the form is shown hide it if the option to start minimized is set to true
+        /// Show the context strip on click of the taskbar icon
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void MainForm_Shown(object sender, EventArgs e)
+        private void taskbar_notifyIcon_Click(object sender, EventArgs e)
         {
-            if (_options.StartMinimized)
+            //Console.WriteLine("taskbar icon button clicked");
+            
+            if (!(e is MouseEventArgs mEvent))
             {
-                this.Hide();
+                return;
+            }
+            
+            if (mEvent.Button == MouseButtons.Right)
+            {
+                notifyIcon_main_contextMenuStrip.Show();
             }
 
         }
 
         /// <summary>
-        /// When a item in the context menu of the icon in the task-bar is pressed change the CurrentProfile to that 
-        /// item
+        /// Show the main form on double click of the taskbar icon
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void profilesContextMenu_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void taskbar_notifyIcon_DoubleClick(object? sender, EventArgs e)
         {
-            profileComboBox.Text = e.ClickedItem.Text;
-            profileComboBox_SelectedIndexChanged(null, null);
+            if (!(e is MouseEventArgs mEvent))
+            {
+                return;
+            }
+
+            if (mEvent.Button != MouseButtons.Left)
+            {
+                return;
+            }
+            //Console.WriteLine("should show form");
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
         }
 
-        private void MainForm_VisibleChanged(object sender, EventArgs e)
+
+        private void keyCounterMainFrame_frame_Resize(object sender, EventArgs e)
         {
-            if (this.Visible == false && _options.UnloadImages)
+            //Console.WriteLine("in resize");
+            try
             {
-                CurrentProfile.KeyboardKeys.DisableEvents();
-                CurrentProfile.MouseKeys.DisableEvents();
-                CurrentProfile.GamepadKeys.DisableEvents();
-
-                KeyboardImages.UnloadImages(_imageList);
-                MouseImages.UnloadImages(_imageList);
-                GamepadImages.UnloadImages(_imageList);
-            }
-            else if (this.Visible && _options.UnloadImages)
-            {
-                Console.WriteLine("{0}  poate", _first);
-                if (_first == false)
+                switch (WindowState)
                 {
-                    KeyboardImages.Initialize(_imageList);
-                    MouseImages.Initialize(_imageList);
-                    GamepadImages.Initialize(_imageList);
+                    // if the form was minimized then do not show it in the apps bar, hide it from the alt+tab feature, stop the update of the 
+                    // list view and stop the time update on the interface, also close all the info forms for keys
+                    case FormWindowState.Minimized:
+                        ProfileManager.RemoveHandlers(NewKeyPress_Handler,OldKeyPress_Handler,ListOfKeysAddedHandler,RemoveListOfKeysFromListView);
+                        foreach (var form in _infoForms)
+                        {
+                            form.Close();
+                            RemoveOwnedForm(form);
+                            form.Dispose();
+                        }
+                        
+                        _infoForms.Clear();
+                        _shouldRestartWorker = false;
+                        if (imageLoader_backgroundWorker.IsBusy)
+                        {
+                            imageLoader_backgroundWorker.CancelAsync();
+                        }
+                        ProfileManager.CurrentDevice.UnloadImages();
 
-                    List<string> keys = CurrentProfile.KeyboardKeys.Dictionary.Keys.ToList();
 
-                    // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the keyboard dictionary
-                    foreach (string key in keys)
-                    {
-                        CurrentProfile.KeyboardKeys.Dictionary[key].ReplaceImage(KeyboardImages.GetImageForKey(key));
-                        CurrentProfile.TotalKeys.Dictionary[key].ReplaceImage(KeyboardImages.GetImageForKey(key));
-                    }
+                        imagesList_listView.Items.Clear();
 
-                    // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the mouse dictionary
-                    keys = CurrentProfile.MouseKeys.Dictionary.Keys.ToList();
-                    foreach (string key in keys)
-                    {
-                        CurrentProfile.MouseKeys.Dictionary[key].ReplaceImage(MouseImages.GetImageForKey(key));
-                        CurrentProfile.TotalKeys.Dictionary[key].ReplaceImage(MouseImages.GetImageForKey(key));
-                    }
+                        for (int i = 0; i < _listOfImages.Images.Count; i++)
+                        {
+                            _listOfImages.Images[i].Dispose();
+                            _listOfImages.Images.RemoveAt(i);
+                        }
 
-                    // For each key in the CurrentProfile create a new CustomPair containing the number of presses and the image for each key of the gamepad dictionary
-                    keys = CurrentProfile.GamepadKeys.Dictionary.Keys.ToList();
-                    foreach (string key in keys)
-                    {
-                        CurrentProfile.GamepadKeys.Dictionary[key].ReplaceImage(GamepadImages.GetImageForKey(key));
-                        CurrentProfile.TotalKeys.Dictionary[key].ReplaceImage(GamepadImages.GetImageForKey(key));
-                    }
+                        _listOfImages.Images.Clear();
 
-                    collectionsComboBox_SelectedIndexChanged(null, null);
+
+                        Interlocked.Exchange(ref _remainingSingleImageRestarts, 0);
+                        Interlocked.Exchange(ref _remainingListOfImageRestarts, 0);
+
+                        queueListsOfImagesYetHaveToCreate.Clear();
+                        queueImagesYetHaveToCreate.Clear();
+
+                        _getImageForOneKey_backgroundWorker.CancelAsync();
+                        _getImagesForListOfKeys_backgroundWorker.CancelAsync();
+
+
+
+                        //should also clear list view here
+                        _clockTimer.Enabled = false;
+                        this.ShowInTaskbar = false;
+                        taskbar_notifyIcon.Visible = true;
+                        this.Visible = false;
+                        break;
+
+                    // opposite of the other case
+                    case FormWindowState.Normal:
+                        ProfileManager.SetupDeviceHandlers(NewKeyPress_Handler,OldKeyPress_Handler,ListOfKeysAddedHandler,RemoveListOfKeysFromListView);
+                        if (imageLoader_backgroundWorker.IsBusy)
+                        {
+                            imageLoader_backgroundWorker.CancelAsync();
+                            _shouldRestartWorker = true;
+                        }
+                        else
+                        {
+                            imageLoader_backgroundWorker.RunWorkerAsync();
+                        }
+                        this.ShowInTaskbar = true;
+                        _clockTimer.Enabled = true;
+                        taskbar_notifyIcon.Visible = false;
+                        this.Visible = true;
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to show or hide the main window");
                 }
                 else
                 {
-                    _first = false;
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to show or hide the main window");
+                    
+                }
+                throw exception;
+            }
+        }
+
+
+        /// <summary>
+        /// Save profile, remove hooks and write options
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void keyCounterMainFrame_frame_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                //Console.WriteLine("cleaning up and closing form");
+                ProfileManager.CurrentDevice.UnloadImages();
+                ProfileManager.UpdateTime(DateTime.UtcNow - _startTime);
+                ProfileManager.SaveCurrentProfile(_options.ProfilesLocation);
+
+                KeyboardHookClass.DeleteKeyboardHook();
+                MouseHookClass.DeleteMouseHook();
+
+                GamepadHookClass.DestroyTimer();
+
+                var profName = ProfileManager.GetName();
+                if (profName != null)
+                {
+                    _options.LastUsedProfile = profName;
+                }
+            
+                _options.WriteOptions();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to close the app");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to close the app");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Close form when 'Exit' options used in taskbar menu
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CloseRequest_handler(object? sender, EventArgs e)
+        {
+
+            //Console.WriteLine("requested to close");
+            this.Close();
+        }
+
+        /// <summary>
+        /// Set profile combo box data source, currently selected profile, window state and re-enable the handler for profile changes
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void keyCounterMainFrame_frame_Load(object sender, EventArgs e)
+        {
+            //Console.WriteLine("In load");
+            try
+            {
+                profile_comboBox.DataSource = _options.ProfileList;
+                profile_comboBox.SelectedIndex = -1;
+                profile_comboBox.SelectedIndexChanged += profile_comboBox_SelectedIndexChanged;
+                
+                // select profile depending on user preferences
+                if (_options.UseLastProfile)
+                {
+                    profile_comboBox.SelectedItem = _options.LastUsedProfile ?? _options.ProfileList[0];
+                }
+                else
+                {
+                    profile_comboBox.SelectedItem = _options.OnStartProfile ?? _options.ProfileList[0];
+                }
+
+                if (_options.StartMinimized)
+                {
+                    WindowState = FormWindowState.Minimized;
+                }
+                else
+                {
+                    _clockTimer.Enabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While in load");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While in load");
+                    
+                }
+                throw exception;
+            }
+
+        }
+
+        /// <summary>
+        /// Close all key info windows, select new device, update handlers for said device, make background worker load images for new device
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void inputDevice_comboBox_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                foreach (var form in _infoForms)
+                {
+                    form.Close();
+                    RemoveOwnedForm(form);
+                    form.Dispose();
+                }
+                _infoForms.Clear();
+
+                //Console.WriteLine("device changed");
+
+                var device = inputDevice_comboBox.SelectedItem == null ? "Keyboard" : inputDevice_comboBox.SelectedItem.ToString();
+            
+                ProfileManager.RemoveHandlers(NewKeyPress_Handler,OldKeyPress_Handler,ListOfKeysAddedHandler,RemoveListOfKeysFromListView);
+                if (device == null)
+                {
+                    return;
+                }
+
+                ProfileManager.ChangeDevice(device);
+                ProfileManager.SetupDeviceHandlers(NewKeyPress_Handler,OldKeyPress_Handler,ListOfKeysAddedHandler,RemoveListOfKeysFromListView);
+
+                if (WindowState == FormWindowState.Normal)
+                {
+                    if (imageLoader_backgroundWorker.IsBusy)
+                    {
+                        ProfileManager.RemoveHandlers(NewKeyPress_Handler,OldKeyPress_Handler,ListOfKeysAddedHandler,RemoveListOfKeysFromListView);
+                        imageLoader_backgroundWorker.CancelAsync();
+                        // since cancelling the worker might take some time raise raise a flag letting the worker know when it finishes that it 
+                        // should restart
+                        _shouldRestartWorker = true;
+                    }
+                    else
+                    {
+                        ProfileManager.CurrentDevice.UnloadImages();
+
+                        imageLoader_backgroundWorker.RunWorkerAsync();
+                    }
+                
+                }
+
+                imagesList_listView.Focus();
+
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to switch device type in main form");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to switch device type in main form");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        /// Switch the current profile
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void profile_comboBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            //Console.WriteLine("profile changed");
+            try
+            {
+                // don't change the profile if the same profile was selected
+                var profName = ProfileManager.GetName();
+                if ( profName != null && profName.Equals(profile_comboBox.SelectedItem.ToString()))
+                {
+                    return;
+                }
+
+                GamepadHookClass.StopTimer();
+                ProfileManager.UpdateTime(DateTime.UtcNow - _startTime);
+                ProfileManager.ChangeProfile(profile_comboBox.SelectedItem.ToString(),_options.ProfilesLocation);
+
+                //start gamepad monitoring if the profile is supposed to 
+                var usesGamepad = ProfileManager.UsesGamepad();
+                if (usesGamepad.HasValue && usesGamepad.Value)
+                {
+                    GamepadHookClass.SetUpTimer();
+                    GamepadHookClass.StartTimer();
+                }
+
+                inputDevice_comboBox.DataSource = ProfileManager.GetListOfDevices();
+                if (profile_comboBox.SelectedItem != null)
+                { 
+                    _renderer.SelectedProfile = profile_comboBox.SelectedItem.ToString();
                 }
                 
+                _startTime = DateTime.UtcNow;
             }
-            else if (this.Visible && _options.UnloadImages == false)
+            catch (Exception ex)
             {
-                collectionsComboBox_SelectedIndexChanged(null,null);
-                _first = false;
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to switch profile in main form");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to switch profile in main form");
+                }
+                throw exception;
+            }
+            
+        }
+
+        private void clearProfile_button_Click(object sender, EventArgs e)
+        {
+            ProfileManager.ClearCurrentDeviceDictionary();
+        }
+
+        /// <summary>
+        /// Open key info windows for all selected keys in the list view on right click, also add them to a list
+        /// to keep track of them
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void imagesList_listView_MouseClick(object sender, MouseEventArgs e)
+        {
+            try
+            {
+                if (e.Button != MouseButtons.Right)
+                {
+                    return;
+                }
+
+                foreach (ListViewItem? item in imagesList_listView.SelectedItems)
+                {
+                    if (item == null|| !_listOfImages.Images.ContainsKey(item.ImageKey)  || _listOfImages.Images[item.ImageKey] == null)
+                    {
+                        continue;
+                    }
+
+                    _infoForms.Add(new KeyInfo
+                    {
+                        KeyImage_pictureBox = {Image = (Image) _listOfImages.Images[item.ImageKey]?.Clone()},
+                        Text = item.Name,
+                        KeyName_textBox = {Text = item.Name},
+                        Owner = this
+                    });
+
+                    //show the last added form
+                    _infoForms[^1].Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to open info forms");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to open info forms");
+                    
+                }
+                throw exception;
+            }
+        }
+
+
+        /// <summary>
+        /// Renames the appropriate key and changes its icon
+        /// </summary>
+        /// <param name="previousKeyName"></param>
+        /// <param name="newKeyName"></param>
+        /// <param name="newIcon"></param>
+        public void RenameAndChangeIcon(string previousKeyName, string newKeyName, Image? newIcon)
+        {
+
+            try
+            {
+                // determine the original name of the key, also remove from the rename dictionary the 
+                // key if it is renamed to itself
+                string originalKeyName = previousKeyName;
+                if (ProfileManager.CurrentDevice.RenamesContainsValue(previousKeyName))
+                {
+                    foreach (var renamedKey in ProfileManager.CurrentDevice.KeysRename.Keys)
+                    {
+                        if (ProfileManager.CurrentDevice.KeysRename[renamedKey] == previousKeyName)
+                        {
+                            if (renamedKey != newKeyName)
+                            {
+                                ProfileManager.CurrentDevice.KeysRename[renamedKey] = newKeyName;
+                            }
+                            else
+                            {
+                                ProfileManager.CurrentDevice.KeysRename.Remove(renamedKey);
+                            }
+                           
+                            originalKeyName = renamedKey;
+                            break;
+                        }
+                    }
+
+                }
+                else
+                {
+                    if (previousKeyName != newKeyName)
+                    {
+                        ProfileManager.CurrentDevice.KeysRename.Add(previousKeyName,newKeyName);
+                    }
+                    else
+                    {
+                        if (ProfileManager.CurrentDevice.RenamesContainsKey(previousKeyName))
+                        {
+                            ProfileManager.CurrentDevice.KeysRename.Remove(previousKeyName);
+                        }
+                    }
+                    
+                }
+
+
+                if (newIcon!= null)
+                {
+                    ProfileManager.CurrentDevice.AddOrReplace(newKeyName,newIcon);
+                    ProfileManager.CurrentDevice.RemoveImage(originalKeyName);
+                    newIcon.Dispose();
+                }
+                else
+                {
+                    ProfileManager.CurrentDevice.AddOrReplace(newKeyName,null);
+                }
+
+                // would load the image using a worker but that would put the new image at the end of the list, this instead replaces the image in place.
+                // could be made to replace in place even using the worker, but it would need 1 or 2 new functions, maybe done at a later date...
+                imagesList_listView.BeginUpdate();
+                imagesList_listView.Items.RemoveByKey(previousKeyName);
+                _listOfImages.Images[previousKeyName]?.Dispose();
+                _listOfImages.Images.RemoveByKey(previousKeyName);
+
+                _listOfImages.Images.Add(newKeyName, ProfileManager.CurrentDevice.GetOrCreateImageForKey(newKeyName) ?? throw new NullReferenceException("Image was null whn trying to rename and change"));
+
+                imagesList_listView.Items.Add(newKeyName, ProfileManager.CurrentDevice.KeysCount.Keys[originalKeyName].ToString(), newKeyName);
+                imagesList_listView.EndUpdate();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying to change name and icon for a key");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying to change name and icon for a key");
+                    
+                }
+                throw exception;
+            }
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="newProfileName"></param>
+        /// <returns>true if the given profile name would be valid, false otherwise</returns>
+        public bool IsProfileNameValid(string newProfileName)
+        {
+            foreach (var profileName in _options.ProfileList)
+            {
+                if (profileName == newProfileName)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Create a new 'new profile' window
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void newProfile_button_Click(object sender, EventArgs e)
+        {
+            var newProfileForm = new AddProfile {Owner = this};
+            newProfileForm.ShowDialog();
+            newProfileForm.Dispose();
+            newProfileForm = null;
+        }
+
+
+        /// <summary>
+        /// Create new profile file and update options to reflect changes
+        /// </summary>
+        /// <param name="newProfileName"></param>
+        /// <param name="usesGamepad"></param>
+        public void CreateNewProfile(string newProfileName, bool usesGamepad)
+        {
+            if (ProfileManager.CreateNewProfile(_options.ProfilesLocation, newProfileName, usesGamepad))
+            {
+                _options.ProfileList.Add(newProfileName);
+                UpdateContextMenuProfiles(_options.ProfileList);
+                profile_comboBox.SelectedItem = _options.ProfileList[^1] ?? _options.ProfileList[0];
+            }
+
+        }
+
+        /// <summary>
+        /// Deletes a profile and its corresponding file and changes options to reflect this action
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void deleteProfile_button_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var profileToDelete = profile_comboBox.SelectedItem.ToString();
+                if (profileToDelete != "Default")
+                {
+                    profile_comboBox.SelectedItem = _options.ProfileList[0];
+                    if (File.Exists(Path.Join(_options.ProfilesLocation,"/"+profileToDelete+".txt")))
+                    {
+                        File.Delete(Path.Join(_options.ProfilesLocation,"/"+profileToDelete+".txt"));
+                    }
+
+                    if (profileToDelete != null)
+                    {
+                        _options.ProfileList.Remove(profileToDelete);
+                        UpdateContextMenuProfiles(_options.ProfileList);
+                    }
+                    
+                }
+                else
+                {
+                    MessageBox.Show("THE \"DEFAULT\" PROFILE CANNOT BE DELETED", "Delete Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ChainingException exception)
+                {
+                    exception.AddErrorToChain("While trying delete a profile");
+                }
+                else
+                {
+                    exception = new ChainingException(ex.Message);
+                    exception.AddErrorToChain("While trying delete a profile");
+                    
+                }
+                throw exception;
             }
         }
     }

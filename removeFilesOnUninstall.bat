@@ -1,0 +1,5 @@
+set pathRoaming=/AppData/Roaming/KeyCounter/
+set output="C:/Users/%username%/Desktop/README_KeyCounter.txt"
+for /f "delims=|" %%u in ('dir /B /A:D-H-R "c:/users"') do (IF exist "C:/Users/%%u%pathRoaming%" ( rd /s /q "C:/Users/%%u%pathRoaming%" || echo this C:/Users/%%u%pathRoaming% should be deleted but I don't have the right, the uninstaller will continue but I recommend going and manually removing it >> %output%))
+set pathStartup=/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/
+for /f "delims=|" %%u in ('dir /B /A:D-H-R "c:/users"') do (IF exist "C:/Users/%%u%pathStartup%Key Counter.lnk" ( cd "C:/Users/%%u%pathStartup%" & del "Key Counter.lnk"|| echo this C:/Users/%%u%pathStartup%Key Counter.lnk should be deleted but I don't have the right, the uninstaller will continue but I recommend going and manually removing it >> %output%))
